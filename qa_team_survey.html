@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Team – แบบสอบถามการปรับปรุง Process</title>
+<style>
+  :root {
+    --navy: #1F3864;
+    --blue: #2E75B6;
+    --blue-lt: #EBF3FB;
+    --teal: #0F6E56;
+    --teal-lt: #E1F5EE;
+    --amber: #BA7517;
+    --amber-lt: #FAEEDA;
+    --gray: #5F5E5A;
+    --gray-lt: #F1EFE8;
+    --red: #A32D2D;
+    --red-lt: #FCEBEB;
+    --white: #fff;
+    --border: #D3D1C7;
+    --text: #2C2C2A;
+    --text-s: #5F5E5A;
+    --radius: 10px;
+    --font: 'Sarabun', 'Segoe UI', sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:#F7F8FA;color:var(--text);font-size:15px;line-height:1.7}
+  /* ─── Header ─── */
+  .header{background:var(--navy);color:#fff;padding:28px 0;text-align:center}
+  .header h1{font-size:22px;font-weight:700;letter-spacing:.01em}
+  .header p{font-size:13px;opacity:.7;margin-top:6px}
+  /* ─── Tabs ─── */
+  .tabs{display:flex;background:var(--white);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10}
+  .tab-btn{flex:1;padding:14px 8px;border:none;background:none;font-family:var(--font);font-size:14px;font-weight:500;color:var(--gray);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s}
+  .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+  .tab-btn:hover:not(.active){color:var(--text)}
+  /* ─── Page ─── */
+  .page{display:none;max-width:680px;margin:0 auto;padding:24px 16px 60px}
+  .page.active{display:block}
+  /* ─── Card ─── */
+  .card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
+  .card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .card-title{font-size:15px;font-weight:600;color:var(--navy)}
+  .card-sub{font-size:12px;color:var(--text-s);margin-top:1px}
+  /* ─── Form elements ─── */
+  label{display:block;font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;margin-top:14px}
+  label:first-child{margin-top:0}
+  .required::after{content:" *";color:var(--red)}
+  input[type=text],textarea,select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:var(--text);background:var(--white);transition:border-color .15s}
+  input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.12)}
+  textarea{resize:vertical;min-height:80px}
+  /* ─── Radio / Checkbox groups ─── */
+  .choice-group{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .choice-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s}
+  .choice-item:hover{background:var(--blue-lt);border-color:var(--blue)}
+  .choice-item input{margin-top:2px;accent-color:var(--blue);flex-shrink:0}
+  .choice-item.selected{background:var(--blue-lt);border-color:var(--blue)}
+  .choice-label{font-size:14px;color:var(--text)}
+  .choice-sub{font-size:12px;color:var(--text-s);margin-top:2px}
+  /* ─── Rating ─── */
+  .rating-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .rating-btn{padding:7px 14px;border:1px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;background:var(--white);color:var(--text);transition:all .12s;font-family:var(--font)}
+  .rating-btn:hover,.rating-btn.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
+  /* ─── Submit ─── */
+  .btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:none;padding:12px 28px;border-radius:8px;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+  .btn-primary:hover{background:var(--navy)}
+  .btn-sec{display:inline-flex;align-items:center;gap:8px;background:var(--white);color:var(--navy);border:1.5px solid var(--navy);padding:11px 24px;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;margin-right:8px}
+  .btn-sec:hover{background:var(--navy);color:#fff}
+  /* ─── Progress ─── */
+  .progress-bar{height:4px;background:var(--border);border-radius:2px;margin:8px 0 20px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--blue);border-radius:2px;transition:width .4s}
+  /* ─── Success screen ─── */
+  .success-box{text-align:center;padding:40px 24px}
+  .success-icon{font-size:48px;margin-bottom:16px}
+  .success-title{font-size:20px;font-weight:700;color:var(--teal);margin-bottom:8px}
+  /* ─── Report ─── */
+  .report-header{background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);color:#fff;border-radius:var(--radius);padding:24px;margin-bottom:20px;text-align:center}
+  .report-title{font-size:20px;font-weight:700}
+  .report-sub{font-size:13px;opacity:.75;margin-top:4px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+  .kpi-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+  .kpi-num{font-size:28px;font-weight:700;color:var(--navy)}
+  .kpi-label{font-size:11px;color:var(--text-s);margin-top:2px}
+  .section-title{font-size:14px;font-weight:700;color:var(--navy);margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+  .section-title::before{content:'';display:inline-block;width:4px;height:16px;background:var(--blue);border-radius:2px}
+  .resp-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px}
+  .resp-name{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px}
+  .resp-row{display:flex;gap:8px;margin-bottom:5px;align-items:flex-start;font-size:13px}
+  .resp-label{min-width:110px;color:var(--text-s);flex-shrink:0;font-size:12px}
+  .resp-val{color:var(--text)}
+  .tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500;margin-right:4px;margin-bottom:3px}
+  .tag-blue{background:var(--blue-lt);color:#0C447C}
+  .tag-green{background:var(--teal-lt);color:var(--teal)}
+  .tag-amber{background:var(--amber-lt);color:var(--amber)}
+  .tag-red{background:var(--red-lt);color:var(--red)}
+  .insight-card{border-left:4px solid var(--blue);background:var(--blue-lt);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px;font-size:13px}
+  .insight-title{font-weight:600;color:var(--navy);margin-bottom:4px}
+  .no-data{text-align:center;padding:40px;color:var(--text-s);font-size:14px}
+  .chart-bar-wrap{margin:8px 0}
+  .chart-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px}
+  .chart-label{min-width:120px;color:var(--text-s)}
+  .chart-track{flex:1;height:14px;background:var(--gray-lt);border-radius:7px;overflow:hidden}
+  .chart-fill{height:100%;border-radius:7px;background:var(--blue);transition:width .6s}
+  .chart-count{min-width:24px;text-align:right;font-weight:600;color:var(--navy)}
+  .action-list{list-style:none;padding:0}
+  .action-list li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .action-list li:last-child{border:none}
+  .action-num{min-width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .print-btn{background:var(--teal);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
+  @media print{.tabs,.btn-primary,.btn-sec,.print-btn,.no-print{display:none!important}.page{display:block!important;max-width:100%;padding:0}}
+  @media(max-width:480px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.choice-group{gap:6px}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📋 QA Team – แบบสอบถามการปรับปรุง Process</h1>
+  <p>รับฟังมุมมองทีม เพื่อวางแผนพัฒนากระบวนการ QA ต่อไป</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('form')">📝 แบบสอบถาม</button>
+  <button class="tab-btn" onclick="switchTab('report')">📊 Report Manager</button>
+</div>
+
+<!-- ═══ FORM PAGE ═══ -->
+<div id="page-form" class="page active">
+  <div class="progress-bar"><div class="progress-fill" id="formProgress" style="width:0%"></div></div>
+
+  <!-- ส่วนที่ 1: ข้อมูลพื้นฐาน -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#E6F1FB;color:#1F3864">👤</div>
+      <div><div class="card-title">ข้อมูลพื้นฐาน</div><div class="card-sub">ข้อมูลของคุณจะถูกเก็บเป็นความลับ</div></div>
+    </div>
+    <label class="required">ชื่อ (หรือชื่อเล่น)</label>
+    <input type="text" id="f_name" placeholder="เช่น นาย ก หรือ P'Jane" oninput="updateProgress()">
+    <label class="required">บทบาทหลักใน QA</label>
+    <div class="choice-group" id="f_role">
+      <label class="choice-item"><input type="radio" name="role" value="Manual QA / UAT Tester" onchange="updateProgress()"><div><div class="choice-label">Manual QA / UAT Tester</div><div class="choice-sub">ทดสอบด้วยมือ ตรวจสอบ feature ตาม test case</div></div></label>
+      <label class="choice-item"><input type="radio" name="role" value="Automation QA" onchange="updateProgress()"><div><div class="choice-label">Automation QA</div><div class="choice-sub">เขียน script, ดูแล automated test suite</div></div></label>
+      <label class="choice-item"><input type="radio" name="role" value="QA Lead / Coordinator" onchange="updateProgress()"><div><div class="choice-label">QA Lead / Coordinator</div><div class="choice-sub">วางแผน, ดูแลทีม, รายงานผล</div></div></label>
+      <label class="choice-item"><input type="radio" name="role" value="ทำทั้ง Manual และ Automation" onchange="updateProgress()"><div><div class="choice-label">ทำทั้ง Manual และ Automation</div></div></label>
+    </div>
+    <label class="required">ประสบการณ์ QA (ปี)</label>
+    <div class="choice-group" id="f_exp">
+      <label class="choice-item"><input type="radio" name="exp" value="น้อยกว่า 1 ปี" onchange="updateProgress()"><div class="choice-label">น้อยกว่า 1 ปี</div></label>
+      <label class="choice-item"><input type="radio" name="exp" value="1–3 ปี" onchange="updateProgress()"><div class="choice-label">1–3 ปี</div></label>
+      <label class="choice-item"><input type="radio" name="exp" value="3–5 ปี" onchange="updateProgress()"><div class="choice-label">3–5 ปี</div></label>
+      <label class="choice-item"><input type="radio" name="exp" value="มากกว่า 5 ปี" onchange="updateProgress()"><div class="choice-label">มากกว่า 5 ปี</div></label>
+    </div>
+  </div>
+
+  <!-- ส่วนที่ 2: มุมมองปัจจุบัน -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#EAF3DE;color:#27500A">🔍</div>
+      <div><div class="card-title">มุมมองต่อ Process ปัจจุบัน</div></div>
+    </div>
+
+    <label class="required">โดยรวม คุณพอใจกับ process QA ปัจจุบันมากแค่ไหน?</label>
+    <div class="rating-row" id="f_satisfaction">
+      <button class="rating-btn" onclick="selectRating('f_satisfaction',this,'1')">😞 1</button>
+      <button class="rating-btn" onclick="selectRating('f_satisfaction',this,'2')">😐 2</button>
+      <button class="rating-btn" onclick="selectRating('f_satisfaction',this,'3')">🙂 3</button>
+      <button class="rating-btn" onclick="selectRating('f_satisfaction',this,'4')">😊 4</button>
+      <button class="rating-btn" onclick="selectRating('f_satisfaction',this,'5')">🤩 5</button>
+    </div>
+
+    <label class="required">ปัญหาหลักที่เจอในการทำงาน QA ตอนนี้ (เลือกได้หลายข้อ)</label>
+    <div class="choice-group" id="f_pain">
+      <label class="choice-item"><input type="checkbox" value="Test case ไม่ครบ / ไม่อัปเดต" onchange="updateProgress()"><div class="choice-label">Test case ไม่ครบ / ไม่อัปเดต</div></label>
+      <label class="choice-item"><input type="checkbox" value="ใช้เวลา regression test นานเกินไป" onchange="updateProgress()"><div class="choice-label">ใช้เวลา regression test นานเกินไป</div></label>
+      <label class="choice-item"><input type="checkbox" value="ขาด tool / automation" onchange="updateProgress()"><div class="choice-label">ขาด tool / automation ที่เหมาะสม</div></label>
+      <label class="choice-item"><input type="checkbox" value="สื่อสารกับ Dev ไม่ชัดเจน" onchange="updateProgress()"><div class="choice-label">สื่อสาร bug / ผลการทดสอบกับ Dev ไม่ชัดเจน</div></label>
+      <label class="choice-item"><input type="checkbox" value="Environment ไม่เสถียร" onchange="updateProgress()"><div class="choice-label">Environment ไม่เสถียร / ตั้งค่ายาก</div></label>
+      <label class="choice-item"><input type="checkbox" value="เวลาทดสอบไม่พอ / deadline กระชั้น" onchange="updateProgress()"><div class="choice-label">เวลาทดสอบไม่พอ / deadline กระชั้น</div></label>
+      <label class="choice-item"><input type="checkbox" value="ขาด requirement ที่ชัดเจน" onchange="updateProgress()"><div class="choice-label">ขาด requirement ที่ชัดเจนก่อนทดสอบ</div></label>
+      <label class="choice-item"><input type="checkbox" value="อื่นๆ" onchange="updateProgress()"><div class="choice-label">อื่นๆ</div></label>
+    </div>
+
+    <label>อธิบายปัญหาเพิ่มเติม (ถ้ามี)</label>
+    <textarea id="f_pain_detail" placeholder="เล่าให้ฟังหน่อยครับ..."></textarea>
+  </div>
+
+  <!-- ส่วนที่ 3: แนวทางการปรับปรุง -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#FAEEDA;color:#633806">💡</div>
+      <div><div class="card-title">แนวทางที่อยากปรับปรุง</div></div>
+    </div>
+
+    <label class="required">คุณอยากให้ปรับเรื่องอะไรมากที่สุด? (เลือกสูงสุด 3 ข้อ)</label>
+    <div class="choice-group" id="f_improve">
+      <label class="choice-item"><input type="checkbox" value="ปรับ test case ให้เป็น standard กลาง" onchange="limitCheck(this,3,'f_improve')"><div class="choice-label">ปรับ test case ให้เป็น standard กลาง</div></label>
+      <label class="choice-item"><input type="checkbox" value="นำ AI มาช่วย gen test case / report" onchange="limitCheck(this,3,'f_improve')"><div class="choice-label">นำ AI มาช่วย gen test case / report</div></label>
+      <label class="choice-item"><input type="checkbox" value="เพิ่ม automation coverage" onchange="limitCheck(this,3,'f_improve')"><div class="choice-label">เพิ่ม automation coverage</div></label>
+      <label class="choice-item"><input type="checkbox" value="ทำ regression test เร็วขึ้น" onchange="limitCheck(this,3,'f_improve')"><div class="choice-label">ทำ regression test เร็วขึ้น</div></label>
+      <label class="choice-item"><input type="checkbox" value="ปรับ flow การรายงาน bug ให้ชัด" onchange="limitCheck(this,3,'f_improve')"><div class="choice-label">ปรับ flow การรายงาน bug ให้ชัดขึ้น</div></label>
+      <label class="choice-item"><input type="checkbox" value="เพิ่มเวลา / resource ทดสอบ" onchange="limitCheck(this,3,'f_improve')"><div class="choice-label">เพิ่มเวลา / resource สำหรับการทดสอบ</div></label>
+      <label class="choice-item"><input type="checkbox" value="พัฒนา skill ทีม QA" onchange="limitCheck(this,3,'f_improve')"><div class="choice-label">พัฒนา skill ทีม QA (training)</div></label>
+    </div>
+
+    <label class="required">ถ้าให้คุณ "ปรับ 1 อย่าง" ในสัปดาห์หน้าได้เลย คุณจะเลือกอะไร?</label>
+    <textarea id="f_quick_win" placeholder="ตัวอย่างเช่น: ทำ template bug report ใหม่ให้ชัดขึ้น" oninput="updateProgress()"></textarea>
+
+    <label>มีไอเดียหรือ tool ที่อยากลองนำมาใช้?</label>
+    <textarea id="f_tool_idea" placeholder="เช่น อยากลอง Playwright, Jira automation, AI screenshot analyzer..."></textarea>
+  </div>
+
+  <!-- ส่วนที่ 4: มุมมองระยะยาว -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#E1F5EE;color:#0F6E56">🚀</div>
+      <div><div class="card-title">วิสัยทัศน์ระยะยาว</div></div>
+    </div>
+
+    <label class="required">ใน 6 เดือนข้างหน้า คุณอยากให้ทีม QA เป็นอย่างไร?</label>
+    <textarea id="f_vision" placeholder="เช่น อยากให้ regression ใช้เวลาไม่เกิน 2 ชั่วโมง, มี dashboard ผล UAT..." oninput="updateProgress()"></textarea>
+
+    <label class="required">คุณพร้อมที่จะช่วยเปลี่ยนแปลงมากแค่ไหน?</label>
+    <div class="rating-row" id="f_readiness">
+      <button class="rating-btn" onclick="selectRating('f_readiness',this,'1')">😴 ไม่พร้อมเลย</button>
+      <button class="rating-btn" onclick="selectRating('f_readiness',this,'2')">🤔 ลองดูได้</button>
+      <button class="rating-btn" onclick="selectRating('f_readiness',this,'3')">💪 พร้อม</button>
+      <button class="rating-btn" onclick="selectRating('f_readiness',this,'4')">🔥 อยากเปลี่ยนมาก</button>
+    </div>
+
+    <label>สิ่งที่คุณอยากบอก Manager โดยตรง (ไม่บังคับ)</label>
+    <textarea id="f_msg_manager" placeholder="พื้นที่ปลอดภัย — เขียนได้ตรงๆ เลยครับ"></textarea>
+  </div>
+
+  <div style="text-align:center;padding:8px 0 16px">
+    <button class="btn-primary" onclick="submitForm()">✅ ส่งแบบสอบถาม</button>
+  </div>
+</div>
+
+<!-- ═══ REPORT PAGE ═══ -->
+<div id="page-report" class="page">
+  <div id="reportContent">
+    <div class="no-data">
+      <div style="font-size:40px;margin-bottom:12px">📭</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">ยังไม่มีข้อมูล</div>
+      <div style="font-size:13px;color:#888">ให้ทีม QA กรอกแบบสอบถามก่อน แล้วกลับมาดู Report ได้เลย</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────
+const responses = JSON.parse(localStorage.getItem('qa_responses') || '[]');
+const ratings = {};
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('page-' + tab).classList.add('active');
+  if (tab === 'report') renderReport();
+}
+
+// ─── Progress ────────────────────────────────────────
+function updateProgress() {
+  const total = 6;
+  let done = 0;
+  if (document.getElementById('f_name').value.trim()) done++;
+  if (document.querySelector('input[name=role]:checked')) done++;
+  if (document.querySelector('input[name=exp]:checked')) done++;
+  if (ratings['f_satisfaction']) done++;
+  if (document.getElementById('f_quick_win').value.trim()) done++;
+  if (document.getElementById('f_vision').value.trim()) done++;
+  document.getElementById('formProgress').style.width = Math.round(done / total * 100) + '%';
+}
+
+// ─── Rating buttons ───────────────────────────────────
+function selectRating(groupId, btn, val) {
+  document.querySelectorAll('#' + groupId + ' .rating-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  ratings[groupId] = val;
+  updateProgress();
+}
+
+// ─── Limit checkboxes ─────────────────────────────────
+function limitCheck(cb, max, groupId) {
+  const checked = document.querySelectorAll('#' + groupId + ' input:checked');
+  if (checked.length > max) { cb.checked = false; alert('เลือกได้สูงสุด ' + max + ' ข้อครับ'); }
+  updateProgress();
+}
+
+// ─── Submit ───────────────────────────────────────────
+function submitForm() {
+  const name = document.getElementById('f_name').value.trim();
+  const role = document.querySelector('input[name=role]:checked')?.value;
+  const exp  = document.querySelector('input[name=exp]:checked')?.value;
+  const sat  = ratings['f_satisfaction'];
+  const qw   = document.getElementById('f_quick_win').value.trim();
+  const vis  = document.getElementById('f_vision').value.trim();
+
+  if (!name || !role || !exp || !sat || !qw || !vis) {
+    alert('กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบนะครับ'); return;
+  }
+
+  const pain = [...document.querySelectorAll('#f_pain input:checked')].map(c => c.value);
+  const improve = [...document.querySelectorAll('#f_improve input:checked')].map(c => c.value);
+
+  const entry = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString('th-TH'),
+    name, role, exp,
+    satisfaction: sat,
+    readiness: ratings['f_readiness'] || '-',
+    pain,
+    pain_detail: document.getElementById('f_pain_detail').value.trim(),
+    improve,
+    quick_win: qw,
+    tool_idea: document.getElementById('f_tool_idea').value.trim(),
+    vision: vis,
+    msg_manager: document.getElementById('f_msg_manager').value.trim(),
+  };
+
+  responses.push(entry);
+  localStorage.setItem('qa_responses', JSON.stringify(responses));
+
+  document.getElementById('page-form').innerHTML = `
+    <div class="success-box">
+      <div class="success-icon">✅</div>
+      <div class="success-title">ขอบคุณที่ร่วมแชร์มุมมองครับ!</div>
+      <p style="color:var(--text-s);font-size:14px;margin-top:8px">ข้อมูลของคุณจะถูกสรุปใน Report Manager<br>คุณสามารถปิดหน้านี้ได้เลย</p>
+      <div style="margin-top:20px">
+        <button class="btn-sec" onclick="location.reload()">กรอกใหม่</button>
+        <button class="btn-primary" onclick="switchTabDirect('report')">ดู Report →</button>
+      </div>
+    </div>`;
+}
+
+function switchTabDirect(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'form') || (i === 1 && tab === 'report'));
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  if (tab === 'report') renderReport();
+}
+
+// ─── Report ───────────────────────────────────────────
+function renderReport() {
+  const wrap = document.getElementById('reportContent');
+  const rs = JSON.parse(localStorage.getItem('qa_responses') || '[]');
+
+  if (rs.length === 0) {
+    wrap.innerHTML = `<div class="no-data"><div style="font-size:40px;margin-bottom:12px">📭</div><div style="font-size:15px;font-weight:600;margin-bottom:6px">ยังไม่มีข้อมูล</div><div style="font-size:13px;color:#888">ให้ทีม QA กรอกแบบสอบถามก่อน แล้วกลับมาดู Report ได้เลย</div></div>`;
+    return;
+  }
+
+  const avgSat = (rs.reduce((a, r) => a + parseInt(r.satisfaction || 0), 0) / rs.length).toFixed(1);
+  const avgRdy = rs.filter(r => r.readiness !== '-').length
+    ? (rs.filter(r=>r.readiness!=='-').reduce((a,r)=>a+parseInt(r.readiness),0)/rs.filter(r=>r.readiness!=='-').length).toFixed(1)
+    : '-';
+
+  const painCount = {}, improveCount = {};
+  rs.forEach(r => {
+    (r.pain||[]).forEach(p => { painCount[p] = (painCount[p]||0) + 1; });
+    (r.improve||[]).forEach(i => { improveCount[i] = (improveCount[i]||0) + 1; });
+  });
+  const topPain = Object.entries(painCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topImprove = Object.entries(improveCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  function barChart(items, total) {
+    return items.map(([label, cnt]) =>
+      `<div class="chart-row">
+        <div class="chart-label">${label.length>22?label.slice(0,22)+'…':label}</div>
+        <div class="chart-track"><div class="chart-fill" style="width:${Math.round(cnt/total*100)}%"></div></div>
+        <div class="chart-count">${cnt}</div>
+      </div>`).join('');
+  }
+
+  const roles = {};
+  rs.forEach(r => { roles[r.role] = (roles[r.role]||0)+1; });
+
+  const insightPain = topPain[0] ? `ปัญหาที่ทีมเจอมากที่สุดคือ <strong>"${topPain[0][0]}"</strong> (${topPain[0][1]} คน จาก ${rs.length} คน)` : '';
+  const insightImprove = topImprove[0] ? `สิ่งที่ทีมอยากปรับมากที่สุดคือ <strong>"${topImprove[0][0]}"</strong>` : '';
+
+  wrap.innerHTML = `
+    <div class="no-print" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="print-btn" onclick="window.print()">🖨️ Print / PDF</button>
+      <button class="btn-sec" onclick="clearData()" style="font-size:13px;padding:8px 16px">🗑️ ล้างข้อมูล</button>
+    </div>
+    <div class="report-header">
+      <div class="report-title">📊 QA Team – Process Improvement Report</div>
+      <div class="report-sub">สรุปจาก ${rs.length} คน · อัปเดตล่าสุด ${new Date().toLocaleDateString('th-TH')}</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-num">${rs.length}</div><div class="kpi-label">ผู้ตอบแบบสอบถาม</div></div>
+      <div class="kpi-card"><div class="kpi-num">${avgSat}<small style="font-size:14px">/5</small></div><div class="kpi-label">ความพอใจ process ปัจจุบัน</div></div>
+      <div class="kpi-card"><div class="kpi-num">${avgRdy}<small style="font-size:14px">/4</small></div><div class="kpi-label">ความพร้อมรับการเปลี่ยนแปลง</div></div>
+    </div>
+
+    ${insightPain || insightImprove ? `
+    <div class="section-title">Key Insights</div>
+    ${insightPain ? `<div class="insight-card"><div class="insight-title">🔴 ปัญหาหลัก</div>${insightPain}</div>` : ''}
+    ${insightImprove ? `<div class="insight-card"><div class="insight-title">💡 สิ่งที่ทีมอยากเปลี่ยน</div>${insightImprove}</div>` : ''}
+    ` : ''}
+
+    <div class="section-title">ปัญหาที่ทีมเจอ (Top 5)</div>
+    <div class="card" style="padding:16px"><div class="chart-bar-wrap">${barChart(topPain, rs.length)}</div></div>
+
+    <div class="section-title">สิ่งที่อยากปรับปรุง (Top 5)</div>
+    <div class="card" style="padding:16px"><div class="chart-bar-wrap">${barChart(topImprove, rs.length)}</div></div>
+
+    <div class="section-title">Quick Wins – สิ่งที่ปรับได้ทันที</div>
+    <div class="card" style="padding:16px">
+      <ul class="action-list">
+        ${rs.filter(r=>r.quick_win).map((r,i)=>`
+          <li><div class="action-num">${i+1}</div>
+          <div><span class="tag tag-blue">${r.role.split('/')[0].trim()}</span> ${r.quick_win}</div>
+          </li>`).join('')}
+      </ul>
+    </div>
+
+    <div class="section-title">วิสัยทัศน์ทีม – 6 เดือนข้างหน้า</div>
+    <div class="card" style="padding:16px">
+      ${rs.filter(r=>r.vision).map(r=>`
+        <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--blue);font-weight:600;margin-bottom:4px">${r.name} · <span style="color:var(--text-s)">${r.role}</span></div>
+          <div style="font-size:13px">${r.vision}</div>
+        </div>`).join('')}
+    </div>
+
+    ${rs.some(r=>r.msg_manager) ? `
+    <div class="section-title">ข้อความถึง Manager โดยตรง</div>
+    <div class="card" style="padding:16px;background:#FFFBF2;border-color:#F0D090">
+      ${rs.filter(r=>r.msg_manager).map(r=>`
+        <div style="padding:10px 0;border-bottom:1px dashed var(--border)">
+          <div style="font-size:12px;color:var(--amber);font-weight:600;margin-bottom:4px">💬 ${r.name}</div>
+          <div style="font-size:13px">${r.msg_manager}</div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div class="section-title">รายละเอียดทุกคน</div>
+    ${rs.map(r=>`
+      <div class="resp-card">
+        <div class="resp-name">👤 ${r.name} · ${r.date}</div>
+        <div class="resp-row"><div class="resp-label">บทบาท</div><div class="resp-val"><span class="tag tag-blue">${r.role}</span></div></div>
+        <div class="resp-row"><div class="resp-label">ประสบการณ์</div><div class="resp-val">${r.exp}</div></div>
+        <div class="resp-row"><div class="resp-label">ความพอใจ</div><div class="resp-val">${'⭐'.repeat(parseInt(r.satisfaction))} (${r.satisfaction}/5)</div></div>
+        <div class="resp-row"><div class="resp-label">ปัญหาหลัก</div><div class="resp-val">${(r.pain||[]).map(p=>`<span class="tag tag-red">${p}</span>`).join('')||'-'}</div></div>
+        <div class="resp-row"><div class="resp-label">อยากปรับ</div><div class="resp-val">${(r.improve||[]).map(i=>`<span class="tag tag-green">${i}</span>`).join('')||'-'}</div></div>
+        <div class="resp-row"><div class="resp-label">Quick win</div><div class="resp-val">${r.quick_win}</div></div>
+        ${r.tool_idea ? `<div class="resp-row"><div class="resp-label">Tool ที่อยากลอง</div><div class="resp-val">${r.tool_idea}</div></div>` : ''}
+        ${r.pain_detail ? `<div class="resp-row"><div class="resp-label">รายละเอียดปัญหา</div><div class="resp-val">${r.pain_detail}</div></div>` : ''}
+      </div>`).join('')}
+  `;
+}
+
+function clearData() {
+  if (confirm('ลบข้อมูลทั้งหมดใช่ไหม?')) {
+    localStorage.removeItem('qa_responses');
+    location.reload();
+  }
+}
+
+// Highlight selected choice items
+document.addEventListener('change', function(e) {
+  if (e.target.type === 'radio' || e.target.type === 'checkbox') {
+    const group = e.target.closest('.choice-group');
+    if (!group) return;
+    if (e.target.type === 'radio') {
+      group.querySelectorAll('.choice-item').forEach(i => i.classList.remove('selected'));
+      e.target.closest('.choice-item').classList.toggle('selected', e.target.checked);
+    } else {
+      e.target.closest('.choice-item').classList.toggle('selected', e.target.checked);
+    }
+  }
+});
+</script>
+</body>
+</html>
