@@ -425,14 +425,21 @@ ${templateInfo.text.substring(0, 1500)}
 ---
 Match the language style, terminology, and level of detail from this template.` : ''}
 
+FIELD DETECTION RULES:
+- Look for asterisk (*) or word "required" or "บังคับ" next to field labels → put in fields_required
+- Fields without * or required indicator → put in fields_optional
+- Format: "ชื่อ Field (ประเภท)" เช่น "Employee ID (Text)", "Company (Dropdown)", "Active (Checkbox)"
+
 RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
 {
   "step_number": 1,
   "title_th": "ชื่อขั้นตอนภาษาไทย",
   "title_en": "Step Title in English",
-  "description_th": "คำอธิบายละเอียดภาษาไทย",
-  "description_en": "Detailed description in English",
-  "ui_elements": ["UI element 1", "UI element 2"],
+  "description_th": "คำอธิบายละเอียดภาษาไทย 2-3 ประโยค",
+  "description_en": "Detailed description 2-3 sentences",
+  "fields_required": ["Field Name * (Type)", "Field Name 2 * (Type)"],
+  "fields_optional": ["Field Name (Type)", "Field Name 2 (Type)"],
+  "ui_elements": ["Button/Menu names the user clicks"],
   "note_th": "หมายเหตุ (ถ้าไม่มีให้ใส่สตริงว่าง)",
   "note_en": "Note (empty string if none)"
 }`;
@@ -475,10 +482,12 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
       var jm = raw.match(/\{[\s\S]*\}/); if (jm) raw = jm[0];
       let parsed = JSON.parse(raw);
       parsed.step_number = i + 1;
-      if (!parsed.title_th)       parsed.title_th       = 'ขั้นตอนที่ ' + (i+1);
-      if (!parsed.title_en)       parsed.title_en       = 'Step ' + (i+1);
-      if (!parsed.description_th) parsed.description_th = 'ดำเนินการตามขั้นตอนที่แสดงในรูปภาพ';
-      if (!parsed.description_en) parsed.description_en = 'Perform the action shown in the screenshot.';
+      if (!parsed.title_th)        parsed.title_th        = 'ขั้นตอนที่ ' + (i+1);
+      if (!parsed.title_en)        parsed.title_en        = 'Step ' + (i+1);
+      if (!parsed.description_th)  parsed.description_th  = 'ดำเนินการตามขั้นตอนที่แสดงในรูปภาพ';
+      if (!parsed.description_en)  parsed.description_en  = 'Perform the action shown in the screenshot.';
+      if (!parsed.fields_required) parsed.fields_required = [];
+      if (!parsed.fields_optional) parsed.fields_optional = [];
       steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, dpr: f.dpr, ...parsed });
       f.status = 'done';
     } catch(e) {
@@ -567,6 +576,26 @@ function renderSteps() {
               <textarea onchange="steps[${i}].description_en=this.value">${esc(s.description_en)}</textarea>
             </div>
           </div>
+          <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div>
+              <div style="font-size:11px;font-weight:500;color:#A32D2D;margin-bottom:4px">* Required Fields</div>
+              <div id="req-${i}" style="font-size:11px;background:#FCEBEB;border:1px solid #F5BEBE;border-radius:6px;padding:6px 8px;min-height:32px;color:#A32D2D;line-height:1.8">
+                ${(s.fields_required||[]).map(f => '<span style="display:inline-block;margin-right:6px">'+esc(f)+'</span>').join('')||'<span style="color:#C0B9AC">ไม่มี</span>'}
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:500;color:#0F6E56;margin-bottom:4px">Optional Fields</div>
+              <div id="opt-${i}" style="font-size:11px;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:6px;padding:6px 8px;min-height:32px;color:#0F6E56;line-height:1.8">
+                ${(s.fields_optional||[]).map(f => '<span style="display:inline-block;margin-right:6px">'+esc(f)+'</span>').join('')||'<span style="color:#C0B9AC">ไม่มี</span>'}
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:6px">
+            <div style="font-size:11px;color:#5F5E5A;margin-bottom:2px">🖼️ Caption ใต้รูป</div>
+            <input type="text" id="cap-${i}" value="${esc('รูปภาพ ' + (s.step_number) + (s.title_th ? ': ' + s.title_th : ''))}"
+              onchange="steps[${i}].caption=this.value" style="font-size:12px;width:100%"
+              placeholder="เช่น รูปภาพ 1: หน้าจอ Add/Modify User Permission">
+          </div>
           ${s.note_th||s.note_en ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
             <div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 หมายเหตุ (TH)</div>
             <input type="text" value="${esc(s.note_th)}" onchange="steps[${i}].note_th=this.value" style="font-size:12px"></div>
@@ -627,7 +656,7 @@ async function exportWord() {
       return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="CCCCCC"/></w:pBdr>'
            + '<w:spacing w:before="120" w:after="120"/></w:pPr></w:p>';
     }
-    function img(rId, pw, ph, dpr, idx) {
+    function img(rId, pw, ph, dpr, idx, caption) {
       // A4 content width = 5486400 EMU (6 inch)
       // EMU per inch = 914400, screen DPI = 96
       // EMU = (px / dpr) * 914400 / 96 = (px / dpr) * 9525
@@ -648,7 +677,15 @@ async function exportWord() {
         useCy = Math.round(rawCy * maxCx / rawCx);
       }
       var uid = idx !== undefined ? idx + 10 : 1;
-      return '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="80" w:after="80"/></w:pPr><w:r><w:rPr/><w:drawing>'
+      // รูปมีกรอบสีดำ
+      var imgXml = '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="100" w:after="0"/>'
+           + '<w:pBdr>'
+           + '<w:top w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
+           + '<w:left w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
+           + '<w:bottom w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
+           + '<w:right w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
+           + '</w:pBdr>'
+           + '</w:pPr><w:r><w:rPr/><w:drawing>'
            + '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
            + '<wp:extent cx="' + useCx + '" cy="' + useCy + '"/><wp:docPr id="' + uid + '" name="img' + uid + '"/>'
            + '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
@@ -660,6 +697,7 @@ async function exportWord() {
            + '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + useCx + '" cy="' + useCy + '"/></a:xfrm>'
            + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
            + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+      return imgXml;
     }
     var menuDescVal = document.getElementById('menuDesc') ? document.getElementById('menuDesc').value.trim() : '';
     var body = '';
@@ -685,10 +723,69 @@ async function exportWord() {
                 { style:'Heading2', size:32, bold:true, color:hColor, shading:'D6E4F0', before:280, after:80 });
       body += p('Step ' + s.step_number + ': ' + (s.title_en||''),
                 { size:22, italic:true, color:'5F5E5A', before:0, after:80 });
-      if (ip) body += img(ip.rId, s.pw, s.ph, s.dpr, i);
+      if (ip) {
+        var cap = s.caption || ('รูปภาพ ' + s.step_number + (s.title_th ? ': ' + s.title_th : ''));
+        body += img(ip.rId, s.pw, s.ph, s.dpr, i, cap);
+        // Caption ใต้รูป
+        body += '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="60" w:after="120"/>'
+             + '<w:rPr><w:i/><w:color w:val="555555"/></w:rPr></w:pPr>'
+             + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+             + '<w:sz w:val="20"/><w:szCs w:val="20"/><w:i/><w:iCs/><w:color w:val="555555"/></w:rPr>'
+             + '<w:t xml:space="preserve">' + x(cap) + '</w:t></w:r></w:p>';
+      }
       body += p('คำอธิบาย (ภาษาไทย)', { bold:true, size:24, color:'1F3864', before:100, after:30 });
-      body += p(s.description_th||'', { size:24, before:0, after:60 });
-      body += p('Description (English)', { bold:true, size:22, color:'2E75B6', before:60, after:30 });
+      body += p(s.description_th||'', { size:24, before:0, after:40 });
+      // Required / Optional fields table
+      var reqFields = s.fields_required || [];
+      var optFields = s.fields_optional || [];
+      if (reqFields.length > 0 || optFields.length > 0) {
+        var fieldRows = '';
+        var maxLen = Math.max(reqFields.length, optFields.length);
+        for (var fi=0; fi<maxLen; fi++) {
+          var rCell = reqFields[fi] ? x(reqFields[fi]) : '';
+          var oCell = optFields[fi] ? x(optFields[fi]) : '';
+          var rStar = reqFields[fi] ? ' *' : '';
+          fieldRows += '<w:tr>'
+            + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
+            + '<w:shd w:val="clear" w:color="auto" w:fill="FCEBEB"/></w:tcPr>'
+            + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
+            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+            + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="A32D2D"/><w:b/><w:bCs/></w:rPr>'
+            + '<w:t xml:space="preserve">' + (rCell ? rCell + ' *' : '') + '</w:t></w:r></w:p></w:tc>'
+            + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
+            + '<w:shd w:val="clear" w:color="auto" w:fill="E1F5EE"/></w:tcPr>'
+            + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
+            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+            + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="0F6E56"/></w:rPr>'
+            + '<w:t xml:space="preserve">' + oCell + '</w:t></w:r></w:p></w:tc>'
+            + '</w:tr>';
+        }
+        body += '<w:tbl>'
+          + '<w:tblPr><w:tblW w:w="7000" w:type="dxa"/>'
+          + '<w:tblBorders>'
+          + '<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+          + '<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+          + '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+          + '<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+          + '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+          + '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
+          + '</w:tblBorders></w:tblPr>'
+          + '<w:tr><w:trPr><w:tblHeader/></w:trPr>'
+          + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
+          + '<w:shd w:val="clear" w:color="auto" w:fill="A32D2D"/></w:tcPr>'
+          + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
+          + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+          + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:b/><w:bCs/><w:color w:val="FFFFFF"/></w:rPr>'
+          + '<w:t>Required Field *</w:t></w:r></w:p></w:tc>'
+          + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
+          + '<w:shd w:val="clear" w:color="auto" w:fill="0F6E56"/></w:tcPr>'
+          + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
+          + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+          + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:b/><w:bCs/><w:color w:val="FFFFFF"/></w:rPr>'
+          + '<w:t>Optional Field</w:t></w:r></w:p></w:tc>'
+          + '</w:tr>' + fieldRows + '</w:tbl>';
+      }
+      body += p('Description (English)', { bold:true, size:22, color:'2E75B6', before:80, after:30 });
       body += p(s.description_en||'', { size:22, italic:true, color:'444444', before:0, after:60 });
       if (s.note_th||s.note_en) {
         body += p('หมายเหตุ: ' + (s.note_th||'') + '  /  Note: ' + (s.note_en||''),
