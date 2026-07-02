@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Manual Generator</title>
+<style>
+:root {
+  --navy:#1F3864; --blue:#2E75B6; --teal:#0F6E56;
+  --blue-lt:#EBF3FB; --teal-lt:#E1F5EE;
+  --amber:#BA7517; --amber-lt:#FAEEDA;
+  --red:#A32D2D; --red-lt:#FCEBEB;
+  --gray:#5F5E5A; --gray-lt:#F1EFE8;
+  --border:#D3D1C7; --text:#2C2C2A; --text-s:#5F5E5A;
+  --white:#fff; --bg:#F7F8FA;
+  --radius:10px; --font:'Sarabun','Segoe UI',sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;line-height:1.7}
+.header{background:var(--navy);color:#fff;padding:22px 0;text-align:center}
+.header h1{font-size:22px;font-weight:700}
+.header p{font-size:13px;opacity:.7;margin-top:4px}
+.container{max-width:860px;margin:0 auto;padding:24px 16px 60px}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title span{font-size:20px}
+/* Upload zone */
+.upload-zone{border:1.5px dashed var(--border);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:all .15s;background:var(--gray-lt)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-lt)}
+.upload-zone p{font-size:13px;color:var(--text-s);margin-top:8px}
+input[type=file]{display:none}
+/* Settings */
+.setting-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.setting-label{font-size:13px;font-weight:500;color:var(--text);min-width:120px}
+input[type=text],textarea,select{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;color:var(--text);background:var(--white);width:100%}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.1)}
+textarea{resize:vertical;min-height:70px}
+/* Preview grid */
+.preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+.img-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative;background:var(--white)}
+.img-card img{width:100%;height:100px;object-fit:cover;display:block}
+.img-card .img-info{padding:5px 7px}
+.img-card .img-name{font-size:10px;color:var(--text-s);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+.dot-wait{background:#C0B9AC} .dot-loading{background:#F0A500;animation:pulse 1s infinite}
+.dot-done{background:#27500A} .dot-error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.img-card .remove-btn{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center}
+.img-card .step-num{position:absolute;top:4px;left:4px;background:var(--navy);color:#fff;border-radius:4px;font-size:10px;font-weight:600;padding:1px 5px}
+/* Steps result preview */
+.step-list{margin-top:12px}
+.step-item{display:flex;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--white);align-items:flex-start}
+.step-item img{width:80px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)}
+.step-content{flex:1}
+.step-num-badge{background:var(--navy);color:#fff;border-radius:6px;font-size:11px;font-weight:600;padding:2px 8px;display:inline-block;margin-bottom:6px}
+.step-th{font-size:13px;color:var(--text);margin-bottom:3px}
+.step-en{font-size:12px;color:var(--text-s);font-style:italic}
+.step-edit{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.step-edit textarea{font-size:12px;min-height:40px;padding:6px 8px}
+/* Buttons */
+.btn{padding:9px 20px;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--text);cursor:pointer;font-family:var(--font);font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+.btn:hover{background:var(--gray-lt)}
+.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn.primary:hover{background:var(--navy);border-color:var(--navy)}
+.btn.success{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn.success:hover{background:#0a5240}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+/* Progress */
+.progress-wrap{margin:10px 0}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--blue);border-radius:3px;transition:width .4s}
+.progress-label{font-size:12px;color:var(--text-s);margin-top:4px}
+/* Msg */
+.msg{padding:10px 14px;border-radius:8px;font-size:13px;margin:8px 0}
+.msg.info{background:var(--blue-lt);color:#0C447C}
+.msg.success{background:var(--teal-lt);color:var(--teal)}
+.msg.error{background:var(--red-lt);color:var(--red)}
+/* Empty */
+.empty{text-align:center;padding:2rem;color:var(--text-s);font-size:13px}
+/* API key section */
+.api-input-wrap{display:flex;gap:8px;align-items:center}
+.api-input-wrap input{flex:1;font-family:monospace;font-size:12px}
+.api-toggle{background:none;border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;color:var(--gray)}
+/* Sections badge */
+.section-badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 10px;border-radius:20px;margin-left:8px}
+.badge-blue{background:var(--blue-lt);color:#0C447C}
+.badge-green{background:var(--teal-lt);color:var(--teal)}
+/* Sortable hint */
+.sort-hint{font-size:11px;color:var(--text-s);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📖 AI Manual Generator</h1>
+  <p>อัปโหลดรูปหน้าจอ → AI เขียน User Manual 2 ภาษา → Export Word  |  Powered by Groq (ฟรี)</p>
+</div>
+
+<div class="container">
+
+  <!-- Step 0: API Key -->
+  <div class="card">
+    <div class="card-title"><span>🔑</span> API Key (Groq) <span class="section-badge badge-green">ฟรี!</span></div>
+    <div class="api-input-wrap">
+      <input type="password" id="apiKey" placeholder="gsk_..." value="">
+      <button class="api-toggle" onclick="toggleKey()">แสดง</button>
+    </div>
+    <div class="msg info" style="margin-top:8px">ไม่มี API Key? สมัครฟรีได้ที่ <a href="https://console.groq.com" target="_blank" style="color:var(--blue)">console.groq.com</a> → Keys → Create API Key — <strong>ฟรี ไม่มีค่าใช้จ่าย!</strong></div>
+  </div>
+
+  <!-- Step 1: Manual Info -->
+  <div class="card">
+    <div class="card-title"><span>📝</span> ข้อมูล Manual</div>
+    <div class="setting-row">
+      <div class="setting-label">ชื่อ Manual</div>
+      <input type="text" id="manualTitle" placeholder="เช่น คู่มือการใช้งาน E-Budgeting – User Permission" value="คู่มือการใช้งานระบบ">
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">ชื่อระบบ/Module</div>
+      <input type="text" id="systemName" placeholder="เช่น E-Budgeting, QAS Budget Management" value="">
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Section / Chapter</div>
+      <input type="text" id="sectionName" placeholder="เช่น 3.2 Add/Modify User Permission" value="">
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">บริบทเพิ่มเติม</div>
+      <textarea id="context" placeholder="อธิบายให้ AI รู้จักระบบ เช่น: ระบบนี้ใช้สำหรับ Admin จัดการสิทธิ์ผู้ใช้งาน ใน QAS Budget Management..."></textarea>
+    </div>
+  </div>
+
+  <!-- Step 2: Upload -->
+  <div class="card">
+    <div class="card-title"><span>📸</span> อัปโหลด Screenshot <span class="section-badge badge-blue" id="imgCount">0 รูป</span></div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:36px">🖼️</div>
+      <div style="font-weight:500;margin-top:8px">คลิกหรือลากรูปมาวางที่นี่</div>
+      <p>รองรับ JPG, PNG • อัปโหลดได้หลายรูปพร้อมกัน<br>ระบบจะเรียงขั้นตอนตามลำดับที่อัปโหลด</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+    <div class="sort-hint">💡 ลากรูปเพื่อเรียงลำดับขั้นตอนก่อน Generate</div>
+    <div class="preview-grid" id="previewGrid"></div>
+  </div>
+
+  <!-- Step 3: Generate -->
+  <div class="card">
+    <div class="card-title"><span>🤖</span> Generate Manual</div>
+    <div class="progress-wrap" id="progressWrap" style="display:none">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-label" id="progressLabel">กำลังเริ่มต้น...</div>
+    </div>
+    <div id="msgBox"></div>
+    <div class="btn-row">
+      <button class="btn primary" id="genBtn" onclick="generateManual()" disabled>🤖 Generate Manual</button>
+      <button class="btn success" id="exportBtn" onclick="exportWord()" disabled>📄 Export Word (.docx)</button>
+      <button class="btn" onclick="clearAll()">🗑️ ล้างทั้งหมด</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Preview & Edit -->
+  <div class="card" id="resultCard" style="display:none">
+    <div class="card-title"><span>✏️</span> ตรวจสอบและแก้ไข <span class="section-badge badge-green" id="stepCount">0 ขั้นตอน</span></div>
+    <div class="msg info">แก้ไขข้อความได้โดยตรงก่อน Export Word ครับ</div>
+    <div class="step-list" id="stepList"></div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const API = 'https://api.groq.com/openai/v1/chat/completions';
+let files = [];
+let steps = [];
+
+// ─── API Key ──────────────────────────────────────────
+function toggleKey() {
+  const inp = document.getElementById('apiKey');
+  const btn = event.target;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? 'แสดง' : 'ซ่อน';
+}
+
+// ─── File handling ────────────────────────────────────
+function handleFiles(fileList) {
+  for (const f of fileList) {
+    if (!f.type.startsWith('image/')) continue;
+    if (files.find(x => x.name === f.name)) continue;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      files.push({ id: Date.now() + Math.random(), file: f, name: f.name, status: 'wait',
+        url: e.target.result, b64: e.target.result.split(',')[1], mt: f.type || 'image/jpeg' });
+      renderPreviews(); updateImgCount();
+      document.getElementById('genBtn').disabled = files.length === 0;
+    };
+    reader.readAsDataURL(f);
+  }
+  // handled in FileReader callbacks
+}
+
+function updateImgCount() {
+  document.getElementById('imgCount').textContent = files.length + ' รูป';
+}
+
+function removeFile(id) {
+  files = files.filter(f => String(f.id) !== String(id));
+  steps = steps.filter(s => String(s.id) !== String(id));
+  renderPreviews();
+  renderSteps();
+  updateImgCount();
+  document.getElementById('genBtn').disabled = files.length === 0;
+}
+
+function renderPreviews() {
+  const grid = document.getElementById('previewGrid');
+  grid.innerHTML = '';
+  files.forEach((f, i) => {
+    const url = URL.createObjectURL(f.file);
+    const statusMap = { wait:'dot-wait', loading:'dot-loading', done:'dot-done', error:'dot-error' };
+    const labelMap  = { wait:'รอ', loading:'กำลังวิเคราะห์...', done:'✓ เสร็จ', error:'⚠ Error' };
+    const card = document.createElement('div');
+    card.className = 'img-card';
+    card.id = 'imgcard-' + f.id;
+    card.innerHTML = `
+      <div class="step-num">${i+1}</div>
+      <img src="${url}" alt="${f.name}">
+      <button class="remove-btn" onclick="removeFile('${f.id}')">×</button>
+      <div class="img-info">
+        <div class="img-name">${f.name}</div>
+        <div style="font-size:10px;margin-top:2px">
+          <span class="status-dot ${statusMap[f.status]}"></span>${labelMap[f.status]}
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function updateCardStatus(fileObj) {
+  const card = document.getElementById('imgcard-' + fileObj.id);
+  if (!card) return;
+  const statusMap = { wait:'dot-wait', loading:'dot-loading', done:'dot-done', error:'dot-error' };
+  const labelMap  = { wait:'รอ', loading:'กำลังวิเคราะห์...', done:'✓ เสร็จ', error:'⚠ Error' };
+  const dot = card.querySelector('.status-dot');
+  const lbl = card.querySelector('div[style]');
+  if (dot) { dot.className = 'status-dot ' + statusMap[fileObj.status]; }
+  if (lbl) lbl.innerHTML = `<span class="status-dot ${statusMap[fileObj.status]}"></span>${labelMap[fileObj.status]}`;
+}
+
+// ─── Base64 ───────────────────────────────────────────
+async function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ─── Generate ─────────────────────────────────────────
+async function generateManual() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { showMsg('error','กรุณากรอก API Key ก่อนครับ'); return; }
+  if (files.length === 0) { showMsg('error','กรุณาอัปโหลดรูปก่อนครับ'); return; }
+
+  const title   = document.getElementById('manualTitle').value.trim() || 'คู่มือการใช้งาน';
+  const sysName = document.getElementById('systemName').value.trim();
+  const section = document.getElementById('sectionName').value.trim();
+  const ctx     = document.getElementById('context').value.trim();
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลัง Generate...';
+  steps = [];
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('msgBox').innerHTML = '';
+
+  const systemPrompt = `คุณคือผู้เชี่ยวชาญการเขียน User Manual สำหรับระบบ Software
+ข้อมูลระบบ: ${sysName || 'ระบบที่ต้องการทำ Manual'}
+${section ? 'Section: ' + section : ''}
+${ctx ? 'บริบทเพิ่มเติม: ' + ctx : ''}
+
+เมื่อได้รับ Screenshot ให้วิเคราะห์และตอบกลับ JSON เท่านั้น ห้ามมีข้อความอื่น รูปแบบ:
+{
+  "step_number": 1,
+  "title_th": "ชื่อขั้นตอนภาษาไทย (กระชับ 5-10 คำ)",
+  "title_en": "Step Title in English (concise)",
+  "description_th": "อธิบายขั้นตอนนี้ละเอียด 2-3 ประโยค บอกว่าต้องทำอะไร คลิกที่ไหน และผลลัพธ์คืออะไร",
+  "description_en": "Detailed description 2-3 sentences explaining what to do, where to click, and the expected result.",
+  "ui_elements": ["ชื่อปุ่ม/field ที่ต้องโต้ตอบ"],
+  "note_th": "หมายเหตุหรือคำเตือนถ้ามี (ว่างได้)",
+  "note_en": "Note or warning if any (can be empty)"
+}`;
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    f.status = 'loading';
+    updateCardStatus(f);
+    const pct = Math.round((i / files.length) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `กำลังวิเคราะห์รูปที่ ${i+1} / ${files.length}...`;
+
+    try {
+      const b64 = f.b64;
+      const mt  = f.mt || 'image/jpeg';
+      const resp = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          max_tokens: 1000,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: [
+              { type: 'image_url', image_url: { url: `data:${mt};base64,${b64}` } },
+              { type: 'text', text: `นี่คือรูปที่ ${i+1} จากทั้งหมด ${files.length} รูป วิเคราะห์และเขียน Manual step สำหรับรูปนี้` }
+            ]}
+          ]
+        })
+      });
+      const data = await resp.json();
+      let raw = data.choices?.[0]?.message?.content || '';
+      raw = raw.replace(/```json|```/g,'').trim();
+      let parsed = JSON.parse(raw);
+      parsed.step_number = i + 1;
+      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, ...parsed });
+      f.status = 'done';
+    } catch(e) {
+      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name,
+        step_number: i+1,
+        title_th:`ขั้นตอนที่ ${i+1}`, title_en:`Step ${i+1}`,
+        description_th:'', description_en:'',
+        ui_elements:[], note_th:'', note_en:'' });
+      f.status = 'error';
+    }
+    updateCardStatus(f);
+  }
+
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('progressLabel').textContent = `เสร็จแล้ว ${steps.length} ขั้นตอน`;
+
+  renderSteps();
+  document.getElementById('resultCard').style.display = 'block';
+  document.getElementById('stepCount').textContent = steps.length + ' ขั้นตอน';
+  document.getElementById('exportBtn').disabled = false;
+  btn.disabled = false;
+  btn.textContent = '🤖 Generate Manual';
+  showMsg('success', `✅ วิเคราะห์เสร็จแล้ว ${steps.length} ขั้นตอน — แก้ไขได้โดยตรงแล้วกด Export Word`);
+  document.getElementById('resultCard').scrollIntoView({ behavior:'smooth' });
+}
+
+function renderSteps() {
+  const list = document.getElementById('stepList');
+  if (steps.length === 0) { list.innerHTML = ''; return; }
+  list.innerHTML = steps.map((s, i) => `
+    <div class="step-item">
+      <img src="${s.url}" alt="Step ${s.step_number}">
+      <div class="step-content">
+        <div class="step-num-badge">Step ${s.step_number}</div>
+        <div class="step-edit">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div>
+              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">🇹🇭 หัวข้อ (TH)</div>
+              <input type="text" value="${esc(s.title_th)}" onchange="steps[${i}].title_th=this.value" style="font-size:12px">
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">🇬🇧 Title (EN)</div>
+              <input type="text" value="${esc(s.title_en)}" onchange="steps[${i}].title_en=this.value" style="font-size:12px">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+            <div>
+              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">คำอธิบาย (TH)</div>
+              <textarea onchange="steps[${i}].description_th=this.value">${esc(s.description_th)}</textarea>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">Description (EN)</div>
+              <textarea onchange="steps[${i}].description_en=this.value">${esc(s.description_en)}</textarea>
+            </div>
+          </div>
+          ${s.note_th||s.note_en ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+            <div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 หมายเหตุ (TH)</div>
+            <input type="text" value="${esc(s.note_th)}" onchange="steps[${i}].note_th=this.value" style="font-size:12px"></div>
+            <div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 Note (EN)</div>
+            <input type="text" value="${esc(s.note_en)}" onchange="steps[${i}].note_en=this.value" style="font-size:12px"></div>
+          </div>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+
+// ─── Export Word ─────────────────────────────────────────
+async function exportWord() {
+  if (steps.length === 0) { showMsg('error','ยังไม่มีข้อมูล กรุณา Generate ก่อนครับ'); return; }
+  const btn = document.getElementById('exportBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง Word...';
+  const title   = document.getElementById('manualTitle').value.trim() || 'คู่มือการใช้งาน';
+  const sysName = document.getElementById('systemName').value.trim();
+  const section = document.getElementById('sectionName').value.trim();
+  const date    = new Date().toLocaleDateString('th-TH');
+  try {
+    const zip = new JSZip();
+    const imgParts = [];
+    const rels = [];
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      if (!s.b64) continue;
+      const ext = (s.mt||'image/jpeg').includes('png') ? 'png' : 'jpeg';
+      const rId = 'rId' + (i + 10);
+      const imgName = 'image' + (i+1) + '.' + ext;
+      const bin = atob(s.b64);
+      const arr = new Uint8Array(bin.length);
+      for (let k=0;k<bin.length;k++) arr[k]=bin.charCodeAt(k);
+      zip.file('word/media/' + imgName, arr);
+      rels.push('<Relationship Id="' + rId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' + imgName + '"/>');
+      imgParts.push({ rId: rId, step: i, ext: ext });
+    }
+    function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function p(text, o) {
+      o = o || {};
+      var sz = o.size || 24;
+      var b  = o.bold   ? '<w:b/><w:bCs/>' : '';
+      var it = o.italic ? '<w:i/><w:iCs/>' : '';
+      var col= o.color  ? '<w:color w:val="' + o.color + '"/>' : '';
+      var st = o.style  ? '<w:pStyle w:val="' + o.style + '"/>' : '';
+      var sh = o.shading? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shading + '"/>' : '';
+      var bef= o.before !== undefined ? o.before : 60;
+      var aft= o.after  !== undefined ? o.after  : 60;
+      return '<w:p><w:pPr>' + st + '<w:spacing w:before="' + bef + '" w:after="' + aft + '"/>' + sh + '</w:pPr>'
+           + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+           + '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' + b + it + col + '</w:rPr>'
+           + '<w:t xml:space="preserve">' + x(text) + '</w:t></w:r></w:p>';
+    }
+    function hr() {
+      return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="CCCCCC"/></w:pBdr>'
+           + '<w:spacing w:before="120" w:after="120"/></w:pPr></w:p>';
+    }
+    function img(rId) {
+      return '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="80" w:after="80"/></w:pPr><w:r><w:rPr/><w:drawing>'
+           + '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+           + '<wp:extent cx="5486400" cy="3087225"/><wp:docPr id="1" name="img1"/>'
+           + '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+           + '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+           + '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+           + '<pic:nvPicPr><pic:cNvPr id="0" name="img"/><pic:cNvPicPr/></pic:nvPicPr>'
+           + '<pic:blipFill><a:blip r:embed="' + rId + '" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+           + '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+           + '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="5486400" cy="3087225"/></a:xfrm>'
+           + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+           + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+    }
+    var body = '';
+    body += p(title,   { style:'Heading1', size:52, bold:true, color:'1F3864', before:360, after:120 });
+    if (sysName) body += p('ระบบ: ' + sysName, { size:26, color:'2E75B6', before:60, after:40 });
+    if (section) body += p('หัวข้อ: ' + section, { size:24, color:'5F5E5A', before:40, after:40 });
+    body += p('จัดทำโดย: AI Manual Generator  |  วันที่: ' + date, { size:22, color:'888888', italic:true, before:60, after:200 });
+    body += hr();
+    for (var i=0; i<steps.length; i++) {
+      var s = steps[i];
+      var ip = imgParts.find(function(pp){ return pp.step===i; });
+      body += p('ขั้นตอนที่ ' + s.step_number + '  ' + (s.title_th||''),
+                { style:'Heading2', size:32, bold:true, color:'1F3864', shading:'D6E4F0', before:280, after:80 });
+      body += p('Step ' + s.step_number + ': ' + (s.title_en||''),
+                { size:22, italic:true, color:'5F5E5A', before:0, after:80 });
+      if (ip) body += img(ip.rId);
+      body += p('คำอธิบาย (ภาษาไทย)', { bold:true, size:24, color:'1F3864', before:100, after:30 });
+      body += p(s.description_th||'', { size:24, before:0, after:60 });
+      body += p('Description (English)', { bold:true, size:22, color:'2E75B6', before:60, after:30 });
+      body += p(s.description_en||'', { size:22, italic:true, color:'444444', before:0, after:60 });
+      if (s.note_th||s.note_en) {
+        body += p('หมายเหตุ: ' + (s.note_th||'') + '  /  Note: ' + (s.note_en||''),
+                  { size:22, color:'BA7517', shading:'FAEEDA', before:60, after:80 });
+      }
+      body += hr();
+    }
+    var docXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<w:document xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+      + ' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+      + ' xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+      + '<w:body>' + body
+      + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
+      + '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1800" w:header="708" w:footer="708" w:gutter="0"/>'
+      + '</w:sectPr></w:body></w:document>';
+    var relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+      + rels.join('') + '</Relationships>';
+    var stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:docDefaults><w:rPrDefault><w:rPr>'
+      + '<w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+      + '<w:sz w:val="24"/><w:szCs w:val="24"/>'
+      + '</w:rPr></w:rPrDefault></w:docDefaults>'
+      + '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/>'
+      + '<w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK"/>'
+      + '<w:sz w:val="52"/><w:szCs w:val="52"/><w:b/><w:color w:val="1F3864"/></w:rPr></w:style>'
+      + '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/>'
+      + '<w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK"/>'
+      + '<w:sz w:val="32"/><w:szCs w:val="32"/><w:b/><w:color w:val="1F3864"/></w:rPr></w:style>'
+      + '</w:styles>';
+    var ctXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      + '<Default Extension="xml" ContentType="application/xml"/>'
+      + '<Default Extension="jpeg" ContentType="image/jpeg"/>'
+      + '<Default Extension="jpg" ContentType="image/jpeg"/>'
+      + '<Default Extension="png" ContentType="image/png"/>'
+      + '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+      + '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+      + '</Types>';
+    var rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+      + '</Relationships>';
+    zip.file('[Content_Types].xml', ctXml);
+    zip.file('_rels/.rels', rootRels);
+    zip.file('word/document.xml', docXml);
+    zip.file('word/_rels/document.xml.rels', relsXml);
+    zip.file('word/styles.xml', stylesXml);
+    var blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{ level:6 } });
+    var url2 = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var fname = title.replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.docx';
+    a.href=url2; a.download=fname; a.click(); URL.revokeObjectURL(url2);
+    showMsg('success', 'ดาวน์โหลด "' + fname + '" เรียบร้อยแล้วครับ!');
+  } catch(e) { console.error(e); showMsg('error','เกิดข้อผิดพลาด: ' + e.message); }
+  btn.disabled=false; btn.textContent='📄 Export Word (.docx)';
+}
+
+function showMsg(type, text) {
+  document.getElementById('msgBox').innerHTML = '<div class="msg ' + type + '">' + text + '</div>';
+}
+
+function clearAll() {
+  files=[]; steps=[];
+  renderPreviews(); renderSteps();
+  document.getElementById('imgCount').textContent='0 รูป';
+  document.getElementById('genBtn').disabled=true;
+  document.getElementById('exportBtn').disabled=true;
+  document.getElementById('resultCard').style.display='none';
+  document.getElementById('progressWrap').style.display='none';
+  document.getElementById('msgBox').innerHTML='';
+}
+
+// Drag & drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
+zone.addEventListener('drop', e=>{ e.preventDefault(); zone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+</script>
+</body>
+</html>
