@@ -253,18 +253,81 @@ function handleTemplate(fileList) {
         }
       } catch(e) {}
 
+      // ── Extract header/footer ──
+      var headerXmls = {}, footerXmls = {}, headerRels = {}, footerRels = {};
+      var headerFooterRels = [];
+      var sectPrXml = '';
+      try {
+        var docRelsFile = zip.file('word/_rels/document.xml.rels');
+        if (docRelsFile) {
+          var docRelsXml = await docRelsFile.async('text');
+          // parse rels manually (ไม่ใช้ matchAll เพราะ browser เก่าอาจไม่รองรับ)
+          var relParts = docRelsXml.split('<Relationship ');
+          for (var ri = 1; ri < relParts.length; ri++) {
+            var rp = relParts[ri];
+            var idM = rp.match(/Id="([^"]+)"/);
+            var typeM = rp.match(/Type="[^"]*\/(header|footer)"/);
+            var targetM = rp.match(/Target="([^"]+)"/);
+            if (!idM || !typeM || !targetM) continue;
+            var relId = idM[1], relType = typeM[1], relTarget = targetM[1];
+            var hfFilePath = relTarget.startsWith('word/') ? relTarget : 'word/' + relTarget;
+            var hfFile = zip.file(hfFilePath) || zip.file('word/' + relTarget);
+            if (!hfFile) continue;
+            var hfXml = await hfFile.async('text');
+            var hfObj = { xml: hfXml, target: relTarget };
+            if (relType === 'header') headerXmls[relId] = hfObj;
+            else footerXmls[relId] = hfObj;
+            headerFooterRels.push({ id: relId, type: relType, target: relTarget });
+            // header/footer rels file
+            var hfRelsPath = 'word/' + relTarget.replace(/^word\//, '').replace(/([^\/]+)$/, '_rels/$1.rels');
+            var hfRelsFile = zip.file(hfRelsPath);
+            if (hfRelsFile) {
+              var hfRelsXml = await hfRelsFile.async('text');
+              if (relType === 'header') headerRels[relId] = { xml: hfRelsXml, path: hfRelsPath };
+              else footerRels[relId] = { xml: hfRelsXml, path: hfRelsPath };
+              // copy media files referenced in header/footer
+              var mediaParts = hfRelsXml.split('<Relationship ');
+              for (var mi = 1; mi < mediaParts.length; mi++) {
+                var mp = mediaParts[mi];
+                var mTarget = mp.match(/Target="([^"]+)"/);
+                if (!mTarget) continue;
+                var mPath = mTarget[1].replace('../', 'word/');
+                if (!mPath.startsWith('word/')) mPath = 'word/' + mPath;
+                var mFile = zip.file(mPath);
+                if (mFile) {
+                  var mBin = await mFile.async('uint8array');
+                  if (!templateInfo) templateInfo = {};
+                  if (!templateInfo.mediaFiles) templateInfo.mediaFiles = {};
+                  templateInfo.mediaFiles[mPath] = mBin;
+                }
+              }
+            }
+          }
+        }
+        // sectPr จาก template
+        var sectM = docXml.match(/<w:sectPr[\s\S]{0,4000}<\/w:sectPr>/);
+        if (sectM) sectPrXml = sectM[0];
+      } catch(hfErr) { console.warn('HF extract error:', hfErr); }
+
       templateInfo = {
         name: f.name,
         text: text,
         structure: structure.join(', ') || 'เอกสารทั่วไป',
         stylesXml: stylesXmlFromTpl,
         fontTableXml: fontTableXml,
-        themeColor: themeColor
+        themeColor: themeColor,
+        headerXmls: headerXmls,
+        footerXmls: footerXmls,
+        headerRels: headerRels,
+        footerRels: footerRels,
+        headerFooterRels: headerFooterRels,
+        sectPrXml: sectPrXml
       };
       document.getElementById('tplStatus').style.display = 'flex';
       document.getElementById('tplName').textContent = f.name;
-      const hasStyles = stylesXmlFromTpl ? ' | ✅ ดึง Styles/สีได้แล้ว' : '';
-      document.getElementById('tplDesc').textContent = 'โครงสร้าง: ' + templateInfo.structure + hasStyles;
+      var hfCount = headerFooterRels.length;
+      var hasHF = hfCount > 0 ? ' | ✅ Header/Footer ' + hfCount + ' ไฟล์' : ' | ⚠️ ไม่พบ Header/Footer';
+      document.getElementById('tplDesc').textContent = 'โครงสร้าง: ' + templateInfo.structure + hasHF;
       document.getElementById('tplZone').style.borderColor = 'var(--teal)';
     } catch(err) {
       alert('อ่านไฟล์ไม่ได้: ' + err.message);
@@ -290,29 +353,45 @@ function toggleKey() {
 
 // ─── File handling ────────────────────────────────────
 function handleFiles(fileList) {
-  for (const f of fileList) {
-    if (!f.type.startsWith('image/')) continue;
-    if (files.find(x => x.name === f.name)) continue;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      const imgEl = new Image();
-      imgEl.onload = () => {
-        // store natural pixels + devicePixelRatio for correct EMU calc
-        const pw = imgEl.naturalWidth;
-        const ph = imgEl.naturalHeight;
-        const dpr = window.devicePixelRatio || 1;
-        files.push({ id: Date.now() + Math.random(), file: f, name: f.name, status: 'wait',
-          url: dataUrl, b64: dataUrl.split(',')[1], mt: f.type || 'image/jpeg',
-          pw: pw, ph: ph, dpr: dpr });
+  if (!fileList || fileList.length === 0) return;
+  Array.from(fileList).forEach(function(f) {
+    if (!f.type.startsWith('image/')) return;
+    if (files.find(function(x){ return x.name === f.name; })) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var dataUrl = e.target.result;
+      var imgEl = new Image();
+      imgEl.onload = function() {
+        var pw = imgEl.naturalWidth  || 800;
+        var ph = imgEl.naturalHeight || 600;
+        var dpr = (window.devicePixelRatio || 1);
+        var fileObj = {
+          id: Date.now() + Math.random(),
+          file: f,
+          name: f.name,
+          status: 'wait',
+          url: dataUrl,
+          b64: dataUrl.split(',')[1],
+          mt: f.type || 'image/jpeg',
+          pw: pw, ph: ph, dpr: dpr
+        };
+        files.push(fileObj);
+        renderPreviews();
+        updateImgCount();
+        document.getElementById('genBtn').disabled = false;
+      };
+      imgEl.onerror = function() {
+        // fallback ถ้า Image load ไม่ได้
+        files.push({ id: Date.now()+Math.random(), file:f, name:f.name, status:'wait',
+          url:dataUrl, b64:dataUrl.split(',')[1], mt:f.type||'image/jpeg', pw:800, ph:600, dpr:1 });
         renderPreviews(); updateImgCount();
-        document.getElementById('genBtn').disabled = files.length === 0;
+        document.getElementById('genBtn').disabled = false;
       };
       imgEl.src = dataUrl;
     };
+    reader.onerror = function() { alert('อ่านไฟล์ไม่ได้: ' + f.name); };
     reader.readAsDataURL(f);
-  }
-  // handled in FileReader callbacks
+  });
 }
 
 function updateImgCount() {
@@ -331,23 +410,21 @@ function removeFile(id) {
 function renderPreviews() {
   const grid = document.getElementById('previewGrid');
   grid.innerHTML = '';
-  files.forEach((f, i) => {
-    const url = URL.createObjectURL(f.file);
-    const statusMap = { wait:'dot-wait', loading:'dot-loading', done:'dot-done', error:'dot-error' };
-    const labelMap  = { wait:'รอ', loading:'กำลังวิเคราะห์...', done:'✓ เสร็จ', error:'⚠ Error' };
-    const card = document.createElement('div');
+  files.forEach(function(f, i) {
+    var url = f.url || '';
+    var statusMap = { wait:'dot-wait', loading:'dot-loading', done:'dot-done', error:'dot-error' };
+    var labelMap  = { wait:'รอ', loading:'กำลังวิเคราะห์...', done:'✓ เสร็จ', error:'⚠ Error' };
+    var card = document.createElement('div');
     card.className = 'img-card';
     card.id = 'imgcard-' + f.id;
-    card.innerHTML = `
-      <div class="step-num">${i+1}</div>
-      <img src="${url}" alt="${f.name}">
-      <button class="remove-btn" onclick="removeFile('${f.id}')">×</button>
-      <div class="img-info">
-        <div class="img-name">${f.name}</div>
-        <div style="font-size:10px;margin-top:2px">
-          <span class="status-dot ${statusMap[f.status]}"></span>${labelMap[f.status]}
-        </div>
-      </div>`;
+    card.innerHTML = '<div class="step-num">' + (i+1) + '</div>'
+      + '<img src="' + url + '" alt="' + f.name + '">'
+      + '<button class="remove-btn" onclick="removeFile(&quot;' + f.id + '&quot;)">×</button>'
+      + '<div class="img-info">'
+      + '<div class="img-name">' + f.name + '</div>'
+      + '<div style="font-size:10px;margin-top:2px">'
+      + '<span class="status-dot ' + statusMap[f.status] + '"></span>' + labelMap[f.status]
+      + '</div></div>';
     grid.appendChild(card);
   });
 }
@@ -391,57 +468,37 @@ async function generateManual() {
   document.getElementById('progressWrap').style.display = 'block';
   document.getElementById('msgBox').innerHTML = '';
 
-  const systemPrompt = `You are an expert technical writer specializing in creating bilingual (Thai/English) User Manuals for software systems.
+  const systemPrompt = `You are an expert technical writer creating bilingual (Thai/English) User Manuals.
 
-SYSTEM CONTEXT:
-- System Name: ${sysName || 'Software System'}
-${section ? '- Section/Chapter: ' + section : ''}
-${ctx ? '- Additional Context: ' + ctx : ''}
+SYSTEM: ${sysName || 'Software System'}${section ? ' | Section: ' + section : ''}${ctx ? ' | Context: ' + ctx : ''}
+${templateInfo ? 'TEMPLATE STYLE: ' + templateInfo.structure + '\n' + templateInfo.text.substring(0, 800) : ''}
 
-ANALYSIS INSTRUCTIONS:
-When analyzing a screenshot, carefully observe:
-1. The page/screen title or breadcrumb navigation
-2. All visible UI elements: buttons, input fields, dropdowns, tables, menus
-3. Any highlighted, circled, or annotated elements indicating user actions
-4. Error messages, success messages, or notifications
-5. The workflow context (what was done before, what comes next)
-6. Any text visible in Thai or English on screen
+INSTRUCTIONS:
+1. title_th: กระชับ 5-8 คำ บอกว่าทำอะไร
+2. title_en: Concise 4-7 words, action-oriented
+3. fields_required: ดู label ที่มี * หรือ "required" หรือ "บังคับ" → ใส่ชื่อ field + ประเภท + " *"
+4. fields_optional: field ที่ไม่มี * → ใส่ชื่อ field + ประเภท
+5. ui_elements: ชื่อปุ่ม/เมนูที่ user ต้องคลิก
+6. note_th/note_en: คำเตือน popup หรือข้อสังเกตพิเศษ (ว่างได้)
 
-WRITING GUIDELINES:
-- title_th: กระชับ 5-8 คำ บอกว่าทำอะไร เช่น "กรอก Employee ID เพื่อค้นหา"
-- title_en: Concise 4-7 words, action-oriented, e.g. "Enter Employee ID to Search"
-- description_th: 2-4 ประโยค อธิบายละเอียด: (1) บอก context หน้าจอนี้คืออะไร (2) User ต้องทำอะไร คลิกไหน/กรอกอะไร (3) ผลลัพธ์ที่เกิดขึ้น
-- description_en: 2-4 sentences mirroring the Thai description with full detail
-- ui_elements: list every button name, field label, or menu item the user interacts with
-- note_th/note_en: mention warnings, required fields, special conditions, or tips visible in screenshot
+FIELD FORMAT: "ชื่อ Field (Text/Dropdown/Checkbox/Radio/Button)"
+EXAMPLES: "Employee ID (Text) *", "Company (Dropdown) *", "Active (Checkbox)"
 
-${templateInfo ? `
-TEMPLATE REFERENCE:
-The user has provided a reference template document. Study its writing style, tone, terminology, and structure, then match your output accordingly.
-Template structure: ${templateInfo.structure}
-Template content sample (use as style reference):
----
-${templateInfo.text.substring(0, 1500)}
----
-Match the language style, terminology, and level of detail from this template.` : ''}
+CRITICAL: fields_required and fields_optional MUST list every visible input field. Never leave both empty if there are form fields in the screenshot.
 
-FIELD DETECTION RULES:
-- Look for asterisk (*) or word "required" or "บังคับ" next to field labels → put in fields_required
-- Fields without * or required indicator → put in fields_optional
-- Format: "ชื่อ Field (ประเภท)" เช่น "Employee ID (Text)", "Company (Dropdown)", "Active (Checkbox)"
-
-RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
+RESPOND ONLY WITH VALID JSON:
 {
   "step_number": 1,
   "title_th": "ชื่อขั้นตอนภาษาไทย",
   "title_en": "Step Title in English",
-  "description_th": "คำอธิบายละเอียดภาษาไทย 2-3 ประโยค",
-  "description_en": "Detailed description 2-3 sentences",
-  "fields_required": ["Field Name * (Type)", "Field Name 2 * (Type)"],
-  "fields_optional": ["Field Name (Type)", "Field Name 2 (Type)"],
-  "ui_elements": ["Button/Menu names the user clicks"],
-  "note_th": "หมายเหตุ (ถ้าไม่มีให้ใส่สตริงว่าง)",
-  "note_en": "Note (empty string if none)"
+  "description_th": "อธิบายภาพรวมของหน้าจอนี้ 1-2 ประโยค",
+  "description_en": "Brief overview of this screen 1-2 sentences.",
+  "action_steps_th": ["1. กดปุ่ม Add User มุมขวาบน", "2. ระบบเปิดหน้าต่าง Add User Permission"],
+  "action_steps_en": ["1. Click the Add User button at the top right", "2. The system opens the Add User Permission window"],
+  "fields_required": ["Employee ID (Text) *", "Status (Radio) *"],
+  "fields_optional": ["Indicator (Text)", "Email (Text)"],
+  "note_th": "",
+  "note_en": ""
 }`;
 
   for (let i = 0; i < files.length; i++) {
@@ -452,15 +509,24 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
     document.getElementById('progressFill').style.width = pct + '%';
     document.getElementById('progressLabel').textContent = 'กำลังวิเคราะห์รูปที่ ' + (i+1) + ' / ' + files.length + (templateInfo ? ' [Template]' : '') + '...';
 
-    try {
-      const b64 = f.b64;
-      const mt  = f.mt || 'image/jpeg';
-      const resp = await fetch(API, {
+    // delay ระหว่าง step เพื่อหลีกเลี่ยง rate limit
+    if (i > 0) await new Promise(function(r){ setTimeout(r, 3000); });
+
+    var b64 = f.b64;
+    var mt  = f.mt || 'image/jpeg';
+
+    async function callAPI(retryCount) {
+      var waitMs = retryCount === 0 ? 0 : (retryCount * 5000);
+      if (waitMs > 0) {
+        document.getElementById('progressLabel').textContent = 'Rate limit — รอ ' + (waitMs/1000) + 's แล้วลองใหม่... (รูปที่ ' + (i+1) + ')';
+        await new Promise(function(r){ setTimeout(r, waitMs); });
+      }
+      var resp = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-          max_tokens: 1200,
+          max_tokens: 1000,
           temperature: 0.3,
           messages: (function() {
             var msgs = [{ role: 'system', content: systemPrompt }];
@@ -476,16 +542,27 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
           })()
         })
       });
-      const data = await resp.json();
-      let raw = data.choices?.[0]?.message?.content || '';
+      if (resp.status === 429) {
+        if (retryCount < 4) return callAPI(retryCount + 1);
+        throw new Error('Rate limit exceeded after retries');
+      }
+      var data = await resp.json();
+      if (data.error) throw new Error(data.error.message || 'API error');
+      var raw = data.choices?.[0]?.message?.content || '';
       raw = raw.replace(/```json|```/g,'').trim();
       var jm = raw.match(/\{[\s\S]*\}/); if (jm) raw = jm[0];
-      let parsed = JSON.parse(raw);
+      var parsed = JSON.parse(raw);
+      return parsed;
+    }
+    try {
+      var parsed = await callAPI(0);
       parsed.step_number = i + 1;
       if (!parsed.title_th)        parsed.title_th        = 'ขั้นตอนที่ ' + (i+1);
       if (!parsed.title_en)        parsed.title_en        = 'Step ' + (i+1);
-      if (!parsed.description_th)  parsed.description_th  = 'ดำเนินการตามขั้นตอนที่แสดงในรูปภาพ';
-      if (!parsed.description_en)  parsed.description_en  = 'Perform the action shown in the screenshot.';
+      if (!parsed.description_th)  parsed.description_th  = '';
+      if (!parsed.description_en)  parsed.description_en  = '';
+      if (!parsed.action_steps_th) parsed.action_steps_th = [];
+      if (!parsed.action_steps_en) parsed.action_steps_en = [];
       if (!parsed.fields_required) parsed.fields_required = [];
       if (!parsed.fields_optional) parsed.fields_optional = [];
       steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, dpr: f.dpr, ...parsed });
@@ -548,65 +625,93 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
 }
 
 function renderSteps() {
-  const list = document.getElementById('stepList');
+  var list = document.getElementById('stepList');
   if (steps.length === 0) { list.innerHTML = ''; return; }
-  list.innerHTML = steps.map((s, i) => `
-    <div class="step-item">
-      <img src="${s.url}" alt="Step ${s.step_number}">
-      <div class="step-content">
-        <div class="step-num-badge">Step ${s.step_number}</div>
-        <div class="step-edit">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <div>
-              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">🇹🇭 หัวข้อ (TH)</div>
-              <input type="text" value="${esc(s.title_th)}" onchange="steps[${i}].title_th=this.value" style="font-size:12px">
-            </div>
-            <div>
-              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">🇬🇧 Title (EN)</div>
-              <input type="text" value="${esc(s.title_en)}" onchange="steps[${i}].title_en=this.value" style="font-size:12px">
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
-            <div>
-              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">คำอธิบาย (TH)</div>
-              <textarea onchange="steps[${i}].description_th=this.value">${esc(s.description_th)}</textarea>
-            </div>
-            <div>
-              <div style="font-size:11px;color:var(--text-s);margin-bottom:2px">Description (EN)</div>
-              <textarea onchange="steps[${i}].description_en=this.value">${esc(s.description_en)}</textarea>
-            </div>
-          </div>
-          <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <div>
-              <div style="font-size:11px;font-weight:500;color:#A32D2D;margin-bottom:4px">* Required Fields</div>
-              <div id="req-${i}" style="font-size:11px;background:#FCEBEB;border:1px solid #F5BEBE;border-radius:6px;padding:6px 8px;min-height:32px;color:#A32D2D;line-height:1.8">
-                ${(s.fields_required||[]).map(f => '<span style="display:inline-block;margin-right:6px">'+esc(f)+'</span>').join('')||'<span style="color:#C0B9AC">ไม่มี</span>'}
-              </div>
-            </div>
-            <div>
-              <div style="font-size:11px;font-weight:500;color:#0F6E56;margin-bottom:4px">Optional Fields</div>
-              <div id="opt-${i}" style="font-size:11px;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:6px;padding:6px 8px;min-height:32px;color:#0F6E56;line-height:1.8">
-                ${(s.fields_optional||[]).map(f => '<span style="display:inline-block;margin-right:6px">'+esc(f)+'</span>').join('')||'<span style="color:#C0B9AC">ไม่มี</span>'}
-              </div>
-            </div>
-          </div>
-          <div style="margin-top:6px">
-            <div style="font-size:11px;color:#5F5E5A;margin-bottom:2px">🖼️ Caption ใต้รูป</div>
-            <input type="text" id="cap-${i}" value="${esc('รูปภาพ ' + (s.step_number) + (s.title_th ? ': ' + s.title_th : ''))}"
-              onchange="steps[${i}].caption=this.value" style="font-size:12px;width:100%"
-              placeholder="เช่น รูปภาพ 1: หน้าจอ Add/Modify User Permission">
-          </div>
-          ${s.note_th||s.note_en ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
-            <div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 หมายเหตุ (TH)</div>
-            <input type="text" value="${esc(s.note_th)}" onchange="steps[${i}].note_th=this.value" style="font-size:12px"></div>
-            <div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 Note (EN)</div>
-            <input type="text" value="${esc(s.note_en)}" onchange="steps[${i}].note_en=this.value" style="font-size:12px"></div>
-          </div>` : ''}
-        </div>
-      </div>
-    </div>`).join('');
-}
+  var html = '';
+  steps.forEach(function(s, i) {
+    var reqHtml = (s.fields_required||[]).map(function(f,fi) {
+      return '<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0;border-bottom:1px solid #FAD4D4">'
+        + '<span style="min-width:16px;font-size:10px;color:#A32D2D;font-weight:600">' + (fi+1) + '.</span>'
+        + '<span style="font-size:12px;color:#A32D2D;font-weight:500">' + esc(f) + '</span>'
+        + '</div>';
+    }).join('') || '<span style="font-size:11px;color:#C0B9AC">ไม่มี</span>';
 
+    var optHtml = (s.fields_optional||[]).map(function(f,fi) {
+      return '<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0;border-bottom:1px solid #D4EDE6">'
+        + '<span style="min-width:16px;font-size:10px;color:#0F6E56">' + (fi+1) + '.</span>'
+        + '<span style="font-size:12px;color:#0F6E56">' + esc(f) + '</span>'
+        + '</div>';
+    }).join('') || '<span style="font-size:11px;color:#C0B9AC">ไม่มี</span>';
+
+    var capVal = esc(s.caption || ('รูปภาพ ' + s.step_number + (s.title_th ? ': ' + s.title_th : '')));
+
+    var descHtml = '';
+    if (s.description_th || s.description_en) {
+      descHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">'
+        + '<div><div style="font-size:11px;color:var(--text-s);margin-bottom:2px">📝 คำอธิบาย (TH)</div>'
+        + '<textarea style="font-size:12px;min-height:60px" onchange="steps[' + i + '].description_th=this.value">' + esc(s.description_th||'') + '</textarea></div>'
+        + '<div><div style="font-size:11px;color:var(--text-s);margin-bottom:2px">📝 Description (EN)</div>'
+        + '<textarea style="font-size:12px;min-height:60px" onchange="steps[' + i + '].description_en=this.value">' + esc(s.description_en||'') + '</textarea></div>'
+        + '</div>';
+    }
+    var actHtml = '';
+    if ((s.action_steps_th||[]).length > 0) {
+      actHtml = '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+        + '<div><div style="font-size:11px;font-weight:500;color:#1F3864;margin-bottom:4px">📋 ขั้นตอน (TH)</div>'
+        + '<div style="background:#EBF3FB;border:1px solid #B5D4F4;border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.8">'
+        + (s.action_steps_th||[]).map(function(a){ return esc(a); }).join('<br>') + '</div></div>'
+        + '<div><div style="font-size:11px;font-weight:500;color:#1F3864;margin-bottom:4px">📋 Action Steps (EN)</div>'
+        + '<div style="background:#EBF3FB;border:1px solid #B5D4F4;border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.8">'
+        + (s.action_steps_en||[]).map(function(a){ return esc(a); }).join('<br>') + '</div></div>'
+        + '</div>';
+    }
+    var noteHtml = (s.note_th || s.note_en)
+      ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">'
+        + '<div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 หมายเหตุ (TH)</div>'
+        + '<input type="text" value="' + esc(s.note_th||'') + '" onchange="steps[' + i + '].note_th=this.value" style="font-size:12px"></div>'
+        + '<div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 Note (EN)</div>'
+        + '<input type="text" value="' + esc(s.note_en||'') + '" onchange="steps[' + i + '].note_en=this.value" style="font-size:12px"></div>'
+        + '</div>'
+      : '';
+
+    html += '<div class="step-item">'
+      + '<img src="' + s.url + '" alt="Step ' + s.step_number + '">'
+      + '<div class="step-content">'
+      + '<div class="step-num-badge">Step ' + s.step_number + '</div>'
+      + '<div class="step-edit">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+        + '<div>'
+          + '<div style="font-size:11px;color:var(--text-s);margin-bottom:2px">🇹🇭 หัวข้อ (TH)</div>'
+          + '<input type="text" value="' + esc(s.title_th||'') + '" onchange="steps[' + i + '].title_th=this.value" style="font-size:12px">'
+        + '</div>'
+        + '<div>'
+          + '<div style="font-size:11px;color:var(--text-s);margin-bottom:2px">🇬🇧 Title (EN)</div>'
+          + '<input type="text" value="' + esc(s.title_en||'') + '" onchange="steps[' + i + '].title_en=this.value" style="font-size:12px">'
+        + '</div>'
+      + '</div>'
+      + '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+        + '<div>'
+          + '<div style="font-size:11px;font-weight:600;color:#A32D2D;margin-bottom:4px">'
+            + '<span style="background:#A32D2D;color:#fff;border-radius:3px;padding:0 5px;font-size:10px;margin-right:4px">*</span>Required Fields'
+          + '</div>'
+          + '<div style="background:#FCEBEB;border:1px solid #F5BEBE;border-radius:6px;padding:6px 8px;min-height:36px">' + reqHtml + '</div>'
+        + '</div>'
+        + '<div>'
+          + '<div style="font-size:11px;font-weight:600;color:#0F6E56;margin-bottom:4px">Optional Fields</div>'
+          + '<div style="background:#E1F5EE;border:1px solid #9FE1CB;border-radius:6px;padding:6px 8px;min-height:36px">' + optHtml + '</div>'
+        + '</div>'
+      + '</div>'
+      + '<div style="margin-top:6px">'
+        + '<div style="font-size:11px;color:#5F5E5A;margin-bottom:2px">🖼️ Caption ใต้รูป</div>'
+        + '<input type="text" value="' + capVal + '" onchange="steps[' + i + '].caption=this.value" style="font-size:12px;width:100%">'
+      + '</div>'
+      + descHtml
+      + actHtml
+      + noteHtml
+      + '</div></div></div>';
+  });
+  list.innerHTML = html;
+}
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 
@@ -623,6 +728,8 @@ async function exportWord() {
     const zip = new JSZip();
     const imgParts = [];
     const rels = [];
+    var hfDocRels = [];
+    var hfContentTypes = [];
     for (let i = 0; i < steps.length; i++) {
       const s = steps[i];
       if (!s.b64) continue;
@@ -639,17 +746,21 @@ async function exportWord() {
     function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function p(text, o) {
       o = o || {};
-      var sz = o.size || 24;
-      var b  = o.bold   ? '<w:b/><w:bCs/>' : '';
-      var it = o.italic ? '<w:i/><w:iCs/>' : '';
-      var col= o.color  ? '<w:color w:val="' + o.color + '"/>' : '';
-      var st = o.style  ? '<w:pStyle w:val="' + o.style + '"/>' : '';
-      var sh = o.shading? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shading + '"/>' : '';
-      var bef= o.before !== undefined ? o.before : 60;
-      var aft= o.after  !== undefined ? o.after  : 60;
-      return '<w:p><w:pPr>' + st + '<w:spacing w:before="' + bef + '" w:after="' + aft + '"/>' + sh + '</w:pPr>'
+      var sz  = o.size || 24;
+      var b   = o.bold   ? '<w:b/><w:bCs/>' : '';
+      var it  = o.italic ? '<w:i/><w:iCs/>' : '';
+      var col = o.color  ? '<w:color w:val="' + o.color + '"/>' : '';
+      var st  = o.style  ? '<w:pStyle w:val="' + o.style + '"/>' : '';
+      var sh  = o.shading? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shading + '"/>' : '';
+      var bef = o.before !== undefined ? o.before : 60;
+      var aft = o.after  !== undefined ? o.after  : 60;
+      // keepWithNext: ถ้า paragraph นี้จะโดนตัดหน้า ให้ย้ายทั้งก้อนไปหน้าถัดไป
+      var kwn = o.keepWithNext ? '<w:keepWithNext/>' : '';
+      // noproof: ปิด spell check
+      var noproof = '<w:noproof/><w:lang w:val="th-TH" w:bidi="th-TH"/>';
+      return '<w:p><w:pPr>' + st + '<w:spacing w:before="' + bef + '" w:after="' + aft + '"/>' + sh + kwn + '</w:pPr>'
            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
-           + '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' + b + it + col + '</w:rPr>'
+           + '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' + b + it + col + noproof + '</w:rPr>'
            + '<w:t xml:space="preserve">' + x(text) + '</w:t></w:r></w:p>';
     }
     function hr() {
@@ -677,26 +788,55 @@ async function exportWord() {
         useCy = Math.round(rawCy * maxCx / rawCx);
       }
       var uid = idx !== undefined ? idx + 10 : 1;
-      // รูปมีกรอบสีดำ
-      var imgXml = '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="100" w:after="0"/>'
-           + '<w:pBdr>'
-           + '<w:top w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
-           + '<w:left w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
-           + '<w:bottom w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
-           + '<w:right w:val="single" w:sz="12" w:space="4" w:color="000000"/>'
-           + '</w:pBdr>'
-           + '</w:pPr><w:r><w:rPr/><w:drawing>'
+      // ใช้ table 1x1 ครอบรูป — กรอบสีดำครบ 4 ด้านเสมอ
+      var bdr = '<w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>'
+              + '<w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>'
+              + '<w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>'
+              + '<w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>';
+      var drawing = '<w:drawing>'
            + '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
-           + '<wp:extent cx="' + useCx + '" cy="' + useCy + '"/><wp:docPr id="' + uid + '" name="img' + uid + '"/>'
+           + '<wp:extent cx="' + useCx + '" cy="' + useCy + '"/>'
+           + '<wp:docPr id="' + uid + '" name="img' + uid + '"/>'
            + '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
            + '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
            + '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
            + '<pic:nvPicPr><pic:cNvPr id="' + uid + '" name="img' + uid + '"/><pic:cNvPicPr/></pic:nvPicPr>'
-           + '<pic:blipFill><a:blip r:embed="' + rId + '" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
-           + '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
-           + '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + useCx + '" cy="' + useCy + '"/></a:xfrm>'
-           + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
-           + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+           + '<pic:blipFill>'
+           + '<a:blip r:embed="' + rId + '" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+           + '<a:stretch><a:fillRect/></a:stretch>'
+           + '</pic:blipFill>'
+           + '<pic:spPr>'
+           + '<a:xfrm><a:off x="0" y="0"/><a:ext cx="' + useCx + '" cy="' + useCy + '"/></a:xfrm>'
+           + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+           + '</pic:spPr>'
+           + '</pic:pic></a:graphicData></a:graphic>'
+           + '</wp:inline></w:drawing>';
+      // table 1x1 ครอบรูป กรอบครบ 4 ด้าน
+      var imgXml = '<w:tbl>'
+        + '<w:tblPr>'
+        + '<w:tblW w:w="0" w:type="auto"/>'
+        + '<w:jc w:val="center"/>'
+        + '<w:tblBorders>' + bdr + bdr.replace(/w:top|w:left|w:bottom|w:right/g,function(m){return m;}) + '</w:tblBorders>'
+        + '<w:tblCellMar>'
+        + '<w:top w:w="0" w:type="dxa"/>'
+        + '<w:left w:w="0" w:type="dxa"/>'
+        + '<w:bottom w:w="0" w:type="dxa"/>'
+        + '<w:right w:w="0" w:type="dxa"/>'
+        + '</w:tblCellMar>'
+        + '</w:tblPr>'
+        + '<w:tr><w:tc>'
+        + '<w:tcPr>'
+        + '<w:tcBorders>' + bdr + '</w:tcBorders>'
+        + '<w:tcMar>'
+        + '<w:top w:w="0" w:type="dxa"/>'
+        + '<w:left w:w="0" w:type="dxa"/>'
+        + '<w:bottom w:w="0" w:type="dxa"/>'
+        + '<w:right w:w="0" w:type="dxa"/>'
+        + '</w:tcMar>'
+        + '</w:tcPr>'
+        + '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr>'
+        + '<w:r><w:rPr/>' + drawing + '</w:r></w:p>'
+        + '</w:tc></w:tr></w:tbl>';
       return imgXml;
     }
     var menuDescVal = document.getElementById('menuDesc') ? document.getElementById('menuDesc').value.trim() : '';
@@ -717,7 +857,8 @@ async function exportWord() {
       var hColor = (templateInfo && templateInfo.themeColor) ? templateInfo.themeColor : '1F3864';
       // ขึ้นหน้าใหม่ทุก step
       if (i > 0) {
-        body += '<w:p><w:pPr><w:pageBreakBefore/></w:pPr><w:r><w:lastRenderedPageBreak/></w:r></w:p>';
+        // page break อยู่ใน paragraph เดียวกับ heading (ไม่สร้าง blank page)
+        body += '<w:p><w:pPr><w:pageBreakBefore w:val="1"/></w:pPr></w:p>';
       }
       body += p('ขั้นตอนที่ ' + s.step_number + '  ' + (s.title_th||''),
                 { style:'Heading2', size:32, bold:true, color:hColor, shading:'D6E4F0', before:280, after:80 });
@@ -733,60 +874,64 @@ async function exportWord() {
              + '<w:sz w:val="20"/><w:szCs w:val="20"/><w:i/><w:iCs/><w:color w:val="555555"/></w:rPr>'
              + '<w:t xml:space="preserve">' + x(cap) + '</w:t></w:r></w:p>';
       }
-      body += p('คำอธิบาย (ภาษาไทย)', { bold:true, size:24, color:'1F3864', before:100, after:30 });
-      body += p(s.description_th||'', { size:24, before:0, after:40 });
-      // Required / Optional fields table
+      // Description TH/EN
+      if (s.description_th) {
+        body += p('คำอธิบาย (ภาษาไทย)', { bold:true, size:23, color:'1F3864', before:80, after:20, keepWithNext:true });
+        body += p(s.description_th, { size:23, before:0, after:40 });
+      }
+      if (s.description_en) {
+        body += p('Description (English)', { bold:true, size:22, color:'2E75B6', before:40, after:20, keepWithNext:true });
+        body += p(s.description_en, { size:22, italic:true, color:'444444', before:0, after:40 });
+      }
+      // Action steps numbered list
+      var actTh = s.action_steps_th || [];
+      var actEn = s.action_steps_en || [];
+      if (actTh.length > 0) {
+        body += p('ขั้นตอนการใช้งาน', { bold:true, size:23, color:'1F3864', before:60, after:20, keepWithNext:true });
+        for (var ai=0; ai<actTh.length; ai++) {
+          body += '<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/><w:keepWithNext/></w:pPr>'
+            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+            + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:noproof/><w:lang w:val="th-TH" w:bidi="th-TH"/></w:rPr>'
+            + '<w:t xml:space="preserve">' + x(actTh[ai]) + '</w:t></w:r></w:p>';
+        }
+      }
+      if (actEn.length > 0) {
+        body += p('Action Steps', { bold:true, size:22, color:'2E75B6', before:60, after:20, keepWithNext:true });
+        for (var ai2=0; ai2<actEn.length; ai2++) {
+          body += '<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/></w:pPr>'
+            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+            + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:i/><w:iCs/><w:color w:val="444444"/>'
+            + '<w:lang w:val="en-US"/></w:rPr>'
+            + '<w:t xml:space="preserve">' + x(actEn[ai2]) + '</w:t></w:r></w:p>';
+        }
+      }
+      // Field list: Required (*แดง) และ Optional (ดำ)
       var reqFields = s.fields_required || [];
       var optFields = s.fields_optional || [];
       if (reqFields.length > 0 || optFields.length > 0) {
-        var fieldRows = '';
-        var maxLen = Math.max(reqFields.length, optFields.length);
-        for (var fi=0; fi<maxLen; fi++) {
-          var rCell = reqFields[fi] ? x(reqFields[fi]) : '';
-          var oCell = optFields[fi] ? x(optFields[fi]) : '';
-          var rStar = reqFields[fi] ? ' *' : '';
-          fieldRows += '<w:tr>'
-            + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
-            + '<w:shd w:val="clear" w:color="auto" w:fill="FCEBEB"/></w:tcPr>'
-            + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
-            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
-            + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="A32D2D"/><w:b/><w:bCs/></w:rPr>'
-            + '<w:t xml:space="preserve">' + (rCell ? rCell + ' *' : '') + '</w:t></w:r></w:p></w:tc>'
-            + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
-            + '<w:shd w:val="clear" w:color="auto" w:fill="E1F5EE"/></w:tcPr>'
-            + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
-            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
-            + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="0F6E56"/></w:rPr>'
-            + '<w:t xml:space="preserve">' + oCell + '</w:t></w:r></w:p></w:tc>'
-            + '</w:tr>';
+        if (reqFields.length > 0) {
+          body += p('Required Fields', { bold:true, size:22, color:'A32D2D', before:80, after:20, keepWithNext:true });
+          for (var fi=0; fi<reqFields.length; fi++) {
+            body += '<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/></w:pPr>'
+              + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+              + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="A32D2D"/><w:b/><w:bCs/>'
+              + '<w:noproof/></w:rPr>'
+              + '<w:t xml:space="preserve">' + (fi+1) + '.  ' + x(reqFields[fi]) + '</w:t></w:r></w:p>';
+          }
         }
-        body += '<w:tbl>'
-          + '<w:tblPr><w:tblW w:w="7000" w:type="dxa"/>'
-          + '<w:tblBorders>'
-          + '<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
-          + '<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
-          + '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
-          + '<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
-          + '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
-          + '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>'
-          + '</w:tblBorders></w:tblPr>'
-          + '<w:tr><w:trPr><w:tblHeader/></w:trPr>'
-          + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
-          + '<w:shd w:val="clear" w:color="auto" w:fill="A32D2D"/></w:tcPr>'
-          + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
-          + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
-          + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:b/><w:bCs/><w:color w:val="FFFFFF"/></w:rPr>'
-          + '<w:t>Required Field *</w:t></w:r></w:p></w:tc>'
-          + '<w:tc><w:tcPr><w:tcW w:w="3500" w:type="dxa"/>'
-          + '<w:shd w:val="clear" w:color="auto" w:fill="0F6E56"/></w:tcPr>'
-          + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
-          + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
-          + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:b/><w:bCs/><w:color w:val="FFFFFF"/></w:rPr>'
-          + '<w:t>Optional Field</w:t></w:r></w:p></w:tc>'
-          + '</w:tr>' + fieldRows + '</w:tbl>';
+        if (optFields.length > 0) {
+          body += p('Optional Fields', { bold:true, size:22, color:'5F5E5A', before:60, after:20, keepWithNext:true });
+          for (var fi2=0; fi2<optFields.length; fi2++) {
+            body += '<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/></w:pPr>'
+              + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+              + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="5F5E5A"/>'
+              + '<w:noproof/></w:rPr>'
+              + '<w:t xml:space="preserve">' + (fi2+1) + '.  ' + x(optFields[fi2]) + '</w:t></w:r></w:p>';
+          }
+        }
+        body += p('', { before:40, after:0 });
       }
-      body += p('Description (English)', { bold:true, size:22, color:'2E75B6', before:80, after:30 });
-      body += p(s.description_en||'', { size:22, italic:true, color:'444444', before:0, after:60 });
+
       if (s.note_th||s.note_en) {
         body += p('หมายเหตุ: ' + (s.note_th||'') + '  /  Note: ' + (s.note_en||''),
                   { size:22, color:'BA7517', shading:'FAEEDA', before:60, after:80 });
@@ -798,15 +943,20 @@ async function exportWord() {
       + ' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
       + ' xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
       + '<w:body>' + body
-      + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
-      + '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1800" w:header="708" w:footer="708" w:gutter="0"/>'
-      + '</w:sectPr></w:body></w:document>';
+      + (templateInfo && templateInfo.sectPrXml
+          ? templateInfo.sectPrXml
+          : '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
+            + '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1800" w:header="708" w:footer="708" w:gutter="0"/>'
+            + '</w:sectPr>')
+      + '</w:body></w:document>';
     var relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
       + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
-      + rels.join('') + '</Relationships>';
-    // Use template styles if available, else default
-    var stylesXml = (templateInfo && templateInfo.stylesXml)
+      + rels.join('')
+      + hfDocRels.join('')
+      + '</Relationships>';
+    // ใช้ default styles เสมอ (ไม่ดึงจาก template เพื่อหลีกเลี่ยง Numbered Styles warning)
+    var stylesXml = (false)
       ? templateInfo.stylesXml
       : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
@@ -828,13 +978,44 @@ async function exportWord() {
       + '<Default Extension="jpeg" ContentType="image/jpeg"/>'
       + '<Default Extension="jpg" ContentType="image/jpeg"/>'
       + '<Default Extension="png" ContentType="image/png"/>'
+      + '<Default Extension="emf" ContentType="image/x-emf"/>'
       + '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
       + '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+      + hfContentTypes.join('')
       + '</Types>';
     var rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
       + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
       + '</Relationships>';
+    // เพิ่ม header/footer จาก template (processing เสร็จแล้ว hfDocRels ถูก populate ก่อน relsXml)
+    if (templateInfo && templateInfo.headerFooterRels && templateInfo.headerFooterRels.length > 0) {
+      templateInfo.headerFooterRels.forEach(function(hf) {
+        var xmlData = hf.type === 'header' ? templateInfo.headerXmls[hf.id] : templateInfo.footerXmls[hf.id];
+        if (xmlData) {
+          var hfTarget = xmlData.target.replace(/^word\//, '');
+          zip.file('word/' + hfTarget, xmlData.xml);
+          hfDocRels.push('<Relationship Id="' + hf.id + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/' + hf.type + '" Target="' + hfTarget + '"/>');
+          var ctType = hf.type === 'header'
+            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml';
+          var cleanTarget = hfTarget.replace(/^word\//, '');
+          hfContentTypes.push('<Override PartName="/word/' + cleanTarget + '" ContentType="' + ctType + '"/>');
+          // header/footer rels
+          var hfRelsData = hf.type === 'header' ? templateInfo.headerRels[hf.id] : templateInfo.footerRels[hf.id];
+          if (hfRelsData && hfRelsData.xml) {
+            var relsTarget = hfTarget.replace(/([^\/]+)$/, '_rels/$1.rels');
+            zip.file('word/' + relsTarget, hfRelsData.xml);
+          }
+        }
+      });
+      // copy media files (images ใน header/footer)
+      if (templateInfo.mediaFiles) {
+        Object.keys(templateInfo.mediaFiles).forEach(function(mPath) {
+          zip.file(mPath, templateInfo.mediaFiles[mPath]);
+        });
+      }
+    }
+
     zip.file('[Content_Types].xml', ctXml);
     zip.file('_rels/.rels', rootRels);
     zip.file('word/document.xml', docXml);
@@ -873,7 +1054,7 @@ function clearAll() {
 const zone = document.getElementById('uploadZone');
 zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('drag'); });
 zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
-zone.addEventListener('drop', e=>{ e.preventDefault(); zone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+zone.addEventListener('drop', function(e){ e.preventDefault(); zone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
 </script>
 </body>
 </html>
