@@ -130,6 +130,14 @@ textarea{resize:vertical;min-height:70px}
     </div>
   </div>
 
+  <!-- Step 1.5: Menu Description (optional) -->
+  <div class="card">
+    <div class="card-title"><span>📌</span> คำอธิบายภาพรวมของเมนู <span class="section-badge" style="background:#F1EFE8;color:#5F5E5A">ไม่บังคับ</span></div>
+    <div class="setting-row">
+      <textarea id="menuDesc" rows="4" placeholder="อธิบายการทำงานของเมนูนี้โดยรวม เช่น: หน้าจอ Add/Modify User Permission ใช้สำหรับ Admin เพิ่ม แก้ไข และลบผู้ใช้งาน รวมถึงกำหนด Role และ Company ให้กับ User แต่ละคน&#10;หากกรอก ระบบจะแสดงส่วนนี้เป็นย่อหน้าแรกก่อน Step 1"></textarea>
+    </div>
+  </div>
+
   <!-- Step 1.5: Template (optional) -->
   <div class="card">
     <div class="card-title"><span>📄</span> Template อ้างอิง <span class="section-badge" style="background:#F1EFE8;color:#5F5E5A">ไม่บังคับ</span></div>
@@ -290,12 +298,13 @@ function handleFiles(fileList) {
       const dataUrl = e.target.result;
       const imgEl = new Image();
       imgEl.onload = () => {
-        // store natural pixels, convert to EMU in img()
+        // store natural pixels + devicePixelRatio for correct EMU calc
         const pw = imgEl.naturalWidth;
         const ph = imgEl.naturalHeight;
+        const dpr = window.devicePixelRatio || 1;
         files.push({ id: Date.now() + Math.random(), file: f, name: f.name, status: 'wait',
           url: dataUrl, b64: dataUrl.split(',')[1], mt: f.type || 'image/jpeg',
-          pw: pw, ph: ph });
+          pw: pw, ph: ph, dpr: dpr });
         renderPreviews(); updateImgCount();
         document.getElementById('genBtn').disabled = files.length === 0;
       };
@@ -445,6 +454,7 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
         body: JSON.stringify({
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
           max_tokens: 1200,
+          temperature: 0.3,
           messages: (function() {
             var msgs = [{ role: 'system', content: systemPrompt }];
             if (templateInfo && templateInfo.text) {
@@ -453,7 +463,7 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
             }
             msgs.push({ role: 'user', content: [
               { type: 'image_url', image_url: { url: 'data:' + mt + ';base64,' + b64 } },
-              { type: 'text', text: 'Image ' + (i+1) + ' of ' + files.length + '. ' + (templateInfo ? 'Follow the template style. ' : '') + 'You MUST analyze this screenshot and generate content regardless of image quality or clarity. Even if the image is small, blurry, or shows only part of the UI - still describe what you can see and write a complete bilingual manual step. Never return empty descriptions. Return valid JSON only.' }
+              { type: 'text', text: 'Image ' + (i+1) + ' of ' + files.length + '. ' + (templateInfo ? 'Follow the template style. ' : '') + 'CRITICAL: You MUST fill ALL fields. Even if image is small/blurry, describe what you see. title_th and description_th CANNOT be empty. description_th must be at least 2 sentences. Return ONLY valid JSON, no other text.' }
             ]});
             return msgs;
           })()
@@ -469,7 +479,7 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
       if (!parsed.title_en)       parsed.title_en       = 'Step ' + (i+1);
       if (!parsed.description_th) parsed.description_th = 'ดำเนินการตามขั้นตอนที่แสดงในรูปภาพ';
       if (!parsed.description_en) parsed.description_en = 'Perform the action shown in the screenshot.';
-      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, ...parsed });
+      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, dpr: f.dpr, ...parsed });
       f.status = 'done';
     } catch(e) {
       console.error('Step ' + (i+1) + ' error:', e);
@@ -500,10 +510,10 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
         p2.step_number = i+1;
         if (!p2.description_th) p2.description_th = 'ดำเนินการตามขั้นตอนที่แสดงในรูปภาพ';
         if (!p2.description_en) p2.description_en = 'Perform the action shown in the screenshot.';
-        steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, ...p2 });
+        steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, dpr: f.dpr, ...p2 });
         f.status = 'done';
       } catch(e2) {
-        steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph,
+        steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, dpr: f.dpr,
           step_number: i+1,
           title_th: 'ขั้นตอนที่ ' + (i+1), title_en: 'Step ' + (i+1),
           description_th: 'กรุณาแก้ไขคำอธิบายสำหรับขั้นตอนนี้',
@@ -617,19 +627,23 @@ async function exportWord() {
       return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="CCCCCC"/></w:pBdr>'
            + '<w:spacing w:before="120" w:after="120"/></w:pPr></w:p>';
     }
-    function img(rId, pw, ph, idx) {
-      // A4 content width = 5486400 EMU (6 inch at 914400 EMU/inch)
-      // Convert px to EMU at 96dpi: px * 9525
+    function img(rId, pw, ph, dpr, idx) {
+      // A4 content width = 5486400 EMU (6 inch)
+      // EMU per inch = 914400, screen DPI = 96
+      // EMU = (px / dpr) * 914400 / 96 = (px / dpr) * 9525
+      var d = dpr && dpr > 0 ? dpr : 1;
       var maxCx = 5486400;
-      var rawCx = pw && pw > 0 ? pw * 9525 : maxCx;
-      var rawCy = ph && ph > 0 ? ph * 9525 : Math.round(maxCx * 9 / 16);
+      var physW = pw / d; // physical inches width
+      var physH = ph / d;
+      var rawCx = physW * 9525;
+      var rawCy = physH * 9525;
       var useCx, useCy;
       if (rawCx <= maxCx) {
-        // รูปเล็ก: ใช้ขนาดจริง ไม่ขยาย
-        useCx = rawCx;
-        useCy = rawCy;
+        // รูปเล็กกว่าหน้า: ใช้ขนาดจริง ไม่ขยาย จัดกึ่งกลาง
+        useCx = Math.round(rawCx);
+        useCy = Math.round(rawCy);
       } else {
-        // รูปใหญ่: scale down ให้พอดีหน้า รักษา ratio
+        // รูปใหญ่กว่าหน้า: scale down พอดีหน้า รักษา ratio
         useCx = maxCx;
         useCy = Math.round(rawCy * maxCx / rawCx);
       }
@@ -647,12 +661,18 @@ async function exportWord() {
            + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
            + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
     }
+    var menuDescVal = document.getElementById('menuDesc') ? document.getElementById('menuDesc').value.trim() : '';
     var body = '';
     body += p(title,   { style:'Heading1', size:52, bold:true, color:'1F3864', before:360, after:120 });
     if (sysName) body += p('ระบบ: ' + sysName, { size:26, color:'2E75B6', before:60, after:40 });
     if (section) body += p('หัวข้อ: ' + section, { size:24, color:'5F5E5A', before:40, after:40 });
-    body += p('จัดทำโดย: AI Manual Generator  |  วันที่: ' + date, { size:22, color:'888888', italic:true, before:60, after:200 });
+    body += p('จัดทำโดย: AI Manual Generator  |  วันที่: ' + date, { size:22, color:'888888', italic:true, before:60, after:120 });
     body += hr();
+    if (menuDescVal) {
+      body += p('ภาพรวม / Overview', { bold:true, size:26, color:'1F3864', before:120, after:60 });
+      body += p(menuDescVal, { size:24, before:0, after:200 });
+      body += hr();
+    }
     for (var i=0; i<steps.length; i++) {
       var s = steps[i];
       var ip = imgParts.find(function(pp){ return pp.step===i; });
@@ -665,7 +685,7 @@ async function exportWord() {
                 { style:'Heading2', size:32, bold:true, color:hColor, shading:'D6E4F0', before:280, after:80 });
       body += p('Step ' + s.step_number + ': ' + (s.title_en||''),
                 { size:22, italic:true, color:'5F5E5A', before:0, after:80 });
-      if (ip) body += img(ip.rId, s.pw, s.ph, i);
+      if (ip) body += img(ip.rId, s.pw, s.ph, s.dpr, i);
       body += p('คำอธิบาย (ภาษาไทย)', { bold:true, size:24, color:'1F3864', before:100, after:30 });
       body += p(s.description_th||'', { size:24, before:0, after:60 });
       body += p('Description (English)', { bold:true, size:22, color:'2E75B6', before:60, after:30 });
