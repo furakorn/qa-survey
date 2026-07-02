@@ -224,14 +224,39 @@ function handleTemplate(fileList) {
       if (hasHeading) structure.push('มีหัวข้อ Heading');
       if (hasTable) structure.push('มี Table');
       if (hasNumbering) structure.push('มีรายการเลขลำดับ');
+      // Extract styles.xml for direct use in generated docx
+      let stylesXmlFromTpl = null;
+      let fontTableXml = null;
+      try {
+        const stylesFile = zip.file('word/styles.xml');
+        if (stylesFile) stylesXmlFromTpl = await stylesFile.async('text');
+        const fontFile = zip.file('word/fontTable.xml');
+        if (fontFile) fontTableXml = await fontFile.async('text');
+      } catch(e) {}
+
+      // Extract theme colors if available
+      let themeColor = null;
+      try {
+        const themeFile = zip.file('word/theme/theme1.xml');
+        if (themeFile) {
+          const themeXml = await themeFile.async('text');
+          const dk1 = themeXml.match(/srgbClr val="([0-9A-Fa-f]{6})"/);
+          if (dk1) themeColor = dk1[1];
+        }
+      } catch(e) {}
+
       templateInfo = {
         name: f.name,
         text: text,
-        structure: structure.join(', ') || 'เอกสารทั่วไป'
+        structure: structure.join(', ') || 'เอกสารทั่วไป',
+        stylesXml: stylesXmlFromTpl,
+        fontTableXml: fontTableXml,
+        themeColor: themeColor
       };
       document.getElementById('tplStatus').style.display = 'flex';
       document.getElementById('tplName').textContent = f.name;
-      document.getElementById('tplDesc').textContent = 'โครงสร้าง: ' + templateInfo.structure + ' | อ่านข้อมูลแล้ว ' + text.length + ' ตัวอักษร';
+      const hasStyles = stylesXmlFromTpl ? ' | ✅ ดึง Styles/สีได้แล้ว' : '';
+      document.getElementById('tplDesc').textContent = 'โครงสร้าง: ' + templateInfo.structure + hasStyles;
       document.getElementById('tplZone').style.borderColor = 'var(--teal)';
     } catch(err) {
       alert('อ่านไฟล์ไม่ได้: ' + err.message);
@@ -265,12 +290,12 @@ function handleFiles(fileList) {
       const dataUrl = e.target.result;
       const imgEl = new Image();
       imgEl.onload = () => {
-        // EMU = pixels * 914400 / 96dpi
-        const cx = Math.round(imgEl.naturalWidth  * 914400 / 96);
-        const cy = Math.round(imgEl.naturalHeight * 914400 / 96);
+        // store natural pixels, convert to EMU in img()
+        const pw = imgEl.naturalWidth;
+        const ph = imgEl.naturalHeight;
         files.push({ id: Date.now() + Math.random(), file: f, name: f.name, status: 'wait',
           url: dataUrl, b64: dataUrl.split(',')[1], mt: f.type || 'image/jpeg',
-          cx: cx, cy: cy, pw: imgEl.naturalWidth, ph: imgEl.naturalHeight });
+          pw: pw, ph: ph });
         renderPreviews(); updateImgCount();
         document.getElementById('genBtn').disabled = files.length === 0;
       };
@@ -439,10 +464,10 @@ RESPOND ONLY WITH VALID JSON (no markdown, no backticks, no explanation):
       raw = raw.replace(/```json|```/g,'').trim();
       let parsed = JSON.parse(raw);
       parsed.step_number = i + 1;
-      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, cx: f.cx, cy: f.cy, pw: f.pw, ph: f.ph, cx: f.cx, cy: f.cy, pw: f.pw, ph: f.ph, ...parsed });
+      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph, cx: f.cx, cy: f.cy, pw: f.pw, ph: f.ph, ...parsed });
       f.status = 'done';
     } catch(e) {
-      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, cx: f.cx, cy: f.cy, pw: f.pw, ph: f.ph,
+      steps.push({ id: f.id, url: f.url, b64: f.b64, mt: f.mt, name: f.name, pw: f.pw, ph: f.ph,
         step_number: i+1,
         title_th:`ขั้นตอนที่ ${i+1}`, title_en:`Step ${i+1}`,
         description_th:'', description_en:'',
@@ -554,14 +579,15 @@ async function exportWord() {
       return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="CCCCCC"/></w:pBdr>'
            + '<w:spacing w:before="120" w:after="120"/></w:pPr></w:p>';
     }
-    function img(rId, cx, cy, idx) {
-      // A4 content width = 5486400 EMU (6 inch) - fit to page width always
+    function img(rId, pw, ph, idx) {
+      // A4 content width = 5486400 EMU (exactly 6 inch at 914400 EMU/inch)
+      // Convert px to EMU at 96dpi: px * 914400 / 96 = px * 9525
       var maxCx = 5486400;
-      var useCx = cx && cx > 0 ? cx : maxCx;
-      var useCy = cy && cy > 0 ? cy : 3087225;
-      // Always scale to fit page width (keep aspect ratio)
-      useCy = Math.round(useCy * maxCx / useCx);
-      useCx = maxCx;
+      var rawCx = pw && pw > 0 ? pw * 9525 : maxCx;
+      var rawCy = ph && ph > 0 ? ph * 9525 : Math.round(maxCx * 9 / 16);
+      // Always fit to page width, keep aspect ratio
+      var useCx = maxCx;
+      var useCy = Math.round(rawCy * maxCx / rawCx);
       var uid = idx !== undefined ? idx + 10 : 1;
       return '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="80" w:after="80"/></w:pPr><w:r><w:rPr/><w:drawing>'
            + '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
@@ -585,11 +611,12 @@ async function exportWord() {
     for (var i=0; i<steps.length; i++) {
       var s = steps[i];
       var ip = imgParts.find(function(pp){ return pp.step===i; });
+      var hColor = (templateInfo && templateInfo.themeColor) ? templateInfo.themeColor : '1F3864';
       body += p('ขั้นตอนที่ ' + s.step_number + '  ' + (s.title_th||''),
-                { style:'Heading2', size:32, bold:true, color:'1F3864', shading:'D6E4F0', before:280, after:80 });
+                { style:'Heading2', size:32, bold:true, color:hColor, shading:'D6E4F0', before:280, after:80 });
       body += p('Step ' + s.step_number + ': ' + (s.title_en||''),
                 { size:22, italic:true, color:'5F5E5A', before:0, after:80 });
-      if (ip) body += img(ip.rId, s.cx, s.cy, i);
+      if (ip) body += img(ip.rId, s.pw, s.ph, i);
       body += p('คำอธิบาย (ภาษาไทย)', { bold:true, size:24, color:'1F3864', before:100, after:30 });
       body += p(s.description_th||'', { size:24, before:0, after:60 });
       body += p('Description (English)', { bold:true, size:22, color:'2E75B6', before:60, after:30 });
@@ -612,19 +639,22 @@ async function exportWord() {
       + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
       + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
       + rels.join('') + '</Relationships>';
-    var stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-      + '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-      + '<w:docDefaults><w:rPrDefault><w:rPr>'
-      + '<w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
-      + '<w:sz w:val="24"/><w:szCs w:val="24"/>'
-      + '</w:rPr></w:rPrDefault></w:docDefaults>'
-      + '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/>'
-      + '<w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK"/>'
-      + '<w:sz w:val="52"/><w:szCs w:val="52"/><w:b/><w:color w:val="1F3864"/></w:rPr></w:style>'
-      + '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/>'
-      + '<w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK"/>'
-      + '<w:sz w:val="32"/><w:szCs w:val="32"/><w:b/><w:color w:val="1F3864"/></w:rPr></w:style>'
-      + '</w:styles>';
+    // Use template styles if available, else default
+    var stylesXml = (templateInfo && templateInfo.stylesXml)
+      ? templateInfo.stylesXml
+      : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        + '<w:docDefaults><w:rPrDefault><w:rPr>'
+        + '<w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
+        + '<w:sz w:val="24"/><w:szCs w:val="24"/>'
+        + '</w:rPr></w:rPrDefault></w:docDefaults>'
+        + '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/>'
+        + '<w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK"/>'
+        + '<w:sz w:val="52"/><w:szCs w:val="52"/><w:b/><w:color w:val="1F3864"/></w:rPr></w:style>'
+        + '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/>'
+        + '<w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK"/>'
+        + '<w:sz w:val="32"/><w:szCs w:val="32"/><w:b/><w:color w:val="1F3864"/></w:rPr></w:style>'
+        + '</w:styles>';
     var ctXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
       + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
@@ -644,6 +674,9 @@ async function exportWord() {
     zip.file('word/document.xml', docXml);
     zip.file('word/_rels/document.xml.rels', relsXml);
     zip.file('word/styles.xml', stylesXml);
+    if (templateInfo && templateInfo.fontTableXml) {
+      zip.file('word/fontTable.xml', templateInfo.fontTableXml);
+    }
     var blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{ level:6 } });
     var url2 = URL.createObjectURL(blob);
     var a = document.createElement('a');
