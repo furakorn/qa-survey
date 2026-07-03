@@ -94,7 +94,7 @@ textarea{resize:vertical;min-height:70px}
 <body>
 <div class="header">
   <h1>📖 AI Manual Generator</h1>
-  <p>อัปโหลดรูปหน้าจอ → AI เขียน User Manual 2 ภาษา → Export Word</p>
+  <p>อัปโหลดรูปหน้าจอ → AI เขียน User Manual 2 ภาษา → Export Word  |  Powered by Groq (ฟรี)</p>
 </div>
 
 <div class="container">
@@ -148,8 +148,8 @@ textarea{resize:vertical;min-height:70px}
     <div style="margin:8px 0 4px;padding:8px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;font-size:12px;color:#1D4ED8;display:flex;align-items:flex-start;gap:8px">
       <span style="font-size:14px;flex-shrink:0">ℹ️</span>
       <div>
-        <strong>แนะนำ: ไม่เกิน 6 รูปต่อครั้ง</strong> เพื่อไม่ให้ติด rate limit<br>
-        <span style="color:#3B82F6">รูปจะถูกย่อเป็น 1024px อัตโนมัติก่อนส่ง AI</span>
+        <strong>แนะนำ: ไม่เกิน 8 รูปต่อครั้ง</strong> เพื่อไม่ให้ติด rate limit<br>
+        <span style="color:#3B82F6">รูปจะถูกย่อเป็น 1024px อัตโนมัติก่อนส่ง AI เพื่อให้ตัวอักษรและสัญลักษณ์ (เช่น *) ยังคมชัด อ่านได้ครบถ้วน</span>
       </div>
     </div>
     <div class="preview-grid" id="previewGrid"></div>
@@ -478,12 +478,31 @@ async function generateManual() {
   // เพิ่ม Overview step ถ้ามี
   var overviewText = (document.getElementById('overviewDesc') || {}).value || '';
   if (overviewText.trim()) {
+    var overviewEN = overviewText.trim();
+    try {
+      var trResp = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          max_tokens: 300,
+          temperature: 0.3,
+          messages: [
+            { role: 'system', content: 'Translate the given Thai text into natural, professional English suitable for a technical user manual. Return ONLY the translated English text, nothing else.' },
+            { role: 'user', content: overviewText.trim() }
+          ]
+        })
+      });
+      var trData = await trResp.json();
+      var trText = (trData.choices?.[0]?.message?.content || '').trim();
+      if (trText) overviewEN = trText;
+    } catch(trErr) { console.warn('Overview translation failed:', trErr); }
     steps.push({
       step_number: 0,
       title_th: 'ภาพรวม',
       title_en: 'Overview',
       description_th: overviewText.trim(),
-      description_en: overviewText.trim(),
+      description_en: overviewEN,
       action_steps_th: [],
       action_steps_en: [],
       fields_required: [],
