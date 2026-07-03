@@ -94,7 +94,7 @@ textarea{resize:vertical;min-height:70px}
 <body>
 <div class="header">
   <h1>📖 AI Manual Generator</h1>
-  <p>อัปโหลดรูปหน้าจอ → AI เขียน User Manual 2 ภาษา → Export Word  |  Powered by Groq (ฟรี)</p>
+  <p>อัปโหลดรูปหน้าจอ → AI เขียน User Manual 2 ภาษา → Export Word</p>
 </div>
 
 <div class="container">
@@ -148,8 +148,8 @@ textarea{resize:vertical;min-height:70px}
     <div style="margin:8px 0 4px;padding:8px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;font-size:12px;color:#1D4ED8;display:flex;align-items:flex-start;gap:8px">
       <span style="font-size:14px;flex-shrink:0">ℹ️</span>
       <div>
-        <strong>แนะนำ: ไม่เกิน 8 รูปต่อครั้ง</strong> เพื่อไม่ให้ติด rate limit<br>
-        <span style="color:#3B82F6">รูปจะถูกย่อเป็น 900px อัตโนมัติก่อนส่ง AI (ประหยัด token ~50%) ตัวอักษรยังอ่านได้ครบ</span>
+        <strong>แนะนำ: ไม่เกิน 6 รูปต่อครั้ง</strong> เพื่อไม่ให้ติด rate limit<br>
+        <span style="color:#3B82F6">รูปจะถูกย่อเป็น 1024px อัตโนมัติก่อนส่ง AI</span>
       </div>
     </div>
     <div class="preview-grid" id="previewGrid"></div>
@@ -488,8 +488,6 @@ async function generateManual() {
       action_steps_en: [],
       fields_required: [],
       fields_optional: [],
-      note_th: '',
-      note_en: '',
       isOverview: true
     });
   }
@@ -500,7 +498,7 @@ async function generateManual() {
   const systemPrompt = `Technical writer: bilingual (Thai/EN) User Manual.
 SYSTEM: ${sysName||'System'}${section?' | '+section:''}${ctx?' | '+ctx:''}
 Return ONLY valid JSON:
-{"step_number":1,"title_th":"5-8คำ","title_en":"4-7 words","description_th":"1-2ประโยค","description_en":"1-2 sentences.","action_steps_th":["1. ..."],"action_steps_en":["1. ..."],"fields_required":["Field (Type) *"],"fields_optional":["Field (Type)"],"note_th":"","note_en":""}
+{"step_number":1,"title_th":"5-8คำ","title_en":"4-7 words","description_th":"1-2ประโยค","description_en":"1-2 sentences.","action_steps_th":["1. ..."],"action_steps_en":["1. ..."],"fields_required":["Field (Type) *"],"fields_optional":["Field (Type)"]}
 Rules: fields_required=label with *, fields_optional=no *. Format: "Name (Text/Dropdown/Checkbox/Radio/Button)". List ALL visible fields.
 description_th/description_en: อธิบายภาพรวมหน้าจอนี้ทำอะไร 2-3 ประโยค ให้ละเอียดพอเข้าใจโดยไม่ต้องดูรูป.
 STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fields, buttons, or content that are not clearly visible. If no form fields exist in the image, fields_required and fields_optional MUST be empty arrays [].`;
@@ -516,7 +514,7 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
     // delay ระหว่าง step เพื่อหลีกเลี่ยง rate limit
     if (i > 0) await new Promise(function(r){ setTimeout(r, 8000); });
 
-    var resized = await resizeImage(f.file, 900);
+    var resized = await resizeImage(f.file, 1024);
     var b64 = resized.b64;
     var mt  = resized.mt;
 
@@ -587,7 +585,7 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
             model: 'meta-llama/llama-4-scout-17b-16e-instruct',
             max_tokens: 500,
             messages: [
-              { role: 'system', content: 'You are a technical writer. Analyze the screenshot and return ONLY valid JSON with keys: step_number, title_th, title_en, description_th, description_en, ui_elements, note_th, note_en. Never return empty values.' },
+              { role: 'system', content: 'You are a technical writer. Analyze the screenshot and return ONLY valid JSON with keys: step_number, title_th, title_en, description_th, description_en, ui_elements. Never return empty values.' },
               { role: 'user', content: [
                 { type: 'image_url', image_url: { url: 'data:' + f.mt + ';base64,' + f.b64 } },
                 { type: 'text', text: 'Step ' + (i+1) + ': describe this screenshot in Thai and English. Return JSON.' }
@@ -612,7 +610,7 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
           title_th: 'ขั้นตอนที่ ' + (i+1), title_en: 'Step ' + (i+1),
           description_th: 'กรุณาแก้ไขคำอธิบายสำหรับขั้นตอนนี้',
           description_en: 'Please edit the description for this step.',
-          ui_elements:[], note_th:'', note_en:'' });
+          ui_elements:[] });
         f.status = 'error';
       }
     }
@@ -673,14 +671,7 @@ function renderSteps() {
         + (s.action_steps_en||[]).map(function(a){ return esc(a); }).join('<br>') + '</div></div>'
         + '</div>';
     }
-    var noteHtml = (s.note_th || s.note_en)
-      ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">'
-        + '<div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 หมายเหตุ (TH)</div>'
-        + '<input type="text" value="' + esc(s.note_th||'') + '" onchange="steps[' + i + '].note_th=this.value" style="font-size:12px"></div>'
-        + '<div><div style="font-size:11px;color:var(--amber);margin-bottom:2px">📌 Note (EN)</div>'
-        + '<input type="text" value="' + esc(s.note_en||'') + '" onchange="steps[' + i + '].note_en=this.value" style="font-size:12px"></div>'
-        + '</div>'
-      : '';
+
 
     var isOv = !!s.isOverview;
     html += '<div class="step-item" style="' + (isOv ? 'border-left:4px solid #3B82F6;background:#EFF6FF' : '') + '">'      + (isOv
@@ -716,7 +707,6 @@ function renderSteps() {
       + '</div>'
       + descHtml
       + actHtml
-      + noteHtml
       + '</div></div></div>';
   });
   list.innerHTML = html;
@@ -941,10 +931,6 @@ async function exportWord() {
         body += p('', { before:40, after:0 });
       }
 
-      if (s.note_th||s.note_en) {
-        body += p('หมายเหตุ: ' + (s.note_th||'') + '  /  Note: ' + (s.note_en||''),
-                  { size:22, color:'BA7517', shading:'FAEEDA', before:60, after:80 });
-      }
       body += hr();
     }
     var docXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
