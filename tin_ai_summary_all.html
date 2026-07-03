@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TIN AI — สรุปทั้งหมด</title>
+<style>
+  body { font-family: sans-serif; background: #F9F9FB; margin: 0; padding: 20px 24px; }
+  .section-title {
+    text-align: center; font-size: 14px; font-weight: 600; color: #26215C;
+    background: #EEEDFE; border: 1px solid #534AB7; border-radius: 24px;
+    display: inline-block; padding: 7px 22px; margin: 0 auto 16px;
+    display: block; width: fit-content;
+  }
+  .section { margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 760px; margin: auto; }
+  .grid-1col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 760px; margin: auto; }
+  .card { border-radius: 12px; overflow: hidden; border: 0.5px solid #ddd; }
+  .head { padding: 9px 14px; }
+  .head p { margin: 0; font-size: 13px; font-weight: 600; }
+  .body { padding: 10px 14px; background: #fff; }
+  .sub { font-size: 11px; font-weight: 600; margin: 0 0 3px; padding-left: 8px; border-left-style: solid; border-left-width: 3px; }
+  .d { font-size: 10px; color: #555; margin: 1px 0 1px 16px; line-height: 1.5; }
+  .d::before { content: "·  "; }
+  hr { margin: 8px 0; border: none; border-top: 0.5px solid #eee; }
+  .divider { border: none; border-top: 1.5px dashed #D0CCF0; max-width: 760px; margin: 0 auto 28px; }
+</style>
+</head>
+<body>
+
+<!-- ===== SECTION 1: Workshop #1 ===== -->
+<div class="section">
+  <p class="section-title">TIN AI Workshop #1</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">ตั้งค่า Claude</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Custom Instruction</p>
+        <p class="d">ระบุตำแหน่งและทีมที่ทำงาน</p>
+        <p class="d">งาน output หลักที่รับผิดชอบ</p>
+        <p class="d">เป้าหมายที่กำลังจะทำในช่วงนี้</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Memory &amp; Session</p>
+        <p class="d">Hand-off สลับงานโดยไม่สูญ context</p>
+        <p class="d">1 session = 1 objective เท่านั้น</p>
+        <p class="d">สั่ง "บันทึกลง memory" ก่อน switch</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">CLAUDE.md</p>
+        <p class="d">กำหนด global persona rules</p>
+        <p class="d">ไม่ให้ทำงานเกินกรอบโดยไม่อธิบาย</p>
+        <p class="d">ไม่ conflict กับ plugin / skill</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Presale ด้วย AI</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Assessment &amp; Scan</p>
+        <p class="d">ใช้ 4–5 scanning tools ต่างกัน</p>
+        <p class="d">วัด complexity ของไฟล์และ module</p>
+        <p class="d">สกัด tech stack ที่ใช้ในโครงการ</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Proposal / WBS</p>
+        <p class="d">ประมาณ man-day แยก internal/external</p>
+        <p class="d">สร้าง project timeline (internal + ส่งลูกค้า)</p>
+        <p class="d">WBS พร้อม efforting estimation</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Flexibility Deck</p>
+        <p class="d">Proof deck: ประเมินก่อน commit</p>
+        <p class="d">Final deck: ใช้จริงในการ pitch</p>
+        <p class="d">แสดง option + trade-off ให้ลูกค้าเลือก</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head" style="background:#F5C4B3">
+        <p style="color:#4A1B0C">โครงการ MPay Transformation</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">BOT &amp; PCI-DSS</p>
+        <p class="d">ต้อง comply ภายใน 1 ปี</p>
+        <p class="d">ห้ามมี end-of-support / end-of-life</p>
+        <p class="d">ครอบคลุม OS, middleware, app framework</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Legacy Tech (EOL)</p>
+        <p class="d">JBoss 7.4 — EOL ปี 2024</p>
+        <p class="d">Struts — EOL ตั้งแต่ปี 2013 (982 JSP)</p>
+        <p class="d">javax → jakarta: 8,000+ ไฟล์เปลี่ยน package</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Migration → Spring</p>
+        <p class="d">Struts → Spring MVC / Spring Boot</p>
+        <p class="d">JDK ต้องใช้ v.17 LTS ขึ้นไป</p>
+        <p class="d">แนะนำ 13 เดือน (ลูกค้าต้องการสั้นกว่า)</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head" style="background:#B5D4F4">
+        <p style="color:#042C53">Agent Workflow</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#042C53;border-left-color:#378ADD">1 Session / 1 Goal</p>
+        <p class="d">ป้องกัน context เพี้ยนเมื่อปน objective</p>
+        <p class="d">ก่อน switch: สั่ง hand-off ลง memory</p>
+        <p class="d">แยก session ตาม feature/branch ย่อย</p>
+        <hr/>
+        <p class="sub" style="color:#042C53;border-left-color:#378ADD">Sonnet + Opus Advisor</p>
+        <p class="d">Sonnet (high) = งานหลักทุกวัน</p>
+        <p class="d">Opus = advisor เมื่อ agent ติด loop</p>
+        <p class="d">ลด token: เขียน spec ก่อนให้ Opus ดู</p>
+        <hr/>
+        <p class="sub" style="color:#042C53;border-left-color:#378ADD">Design → Plan → Do</p>
+        <p class="d">เขียน design spec ก่อนเสมอ</p>
+        <p class="d">ให้ AI ทำ plan แล้ว verify ก่อน execute</p>
+        <p class="d">CLAUDE.md บอก branch strategy + tech stack</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- ===== SECTION 2: Workshop #2 ===== -->
+<div class="section">
+  <p class="section-title">TIN AI Workshop #2</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">ตั้งค่าก่อนเริ่ม</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Custom Instruction</p>
+        <p class="d">ทำก่อนทุกโปรเจกต์</p>
+        <p class="d">ระบุบทบาท, ทีม, เป้าหมายปัจจุบัน</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">3 Instruction Files</p>
+        <p class="d">ระบุบทบาท + output mode</p>
+        <p class="d">ครอบคลุม persona ทุกระดับ</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">CLAUDE.md Project</p>
+        <p class="d">เพิ่ม context เฉพาะโปรเจกต์</p>
+        <p class="d">Claude อ่านทุกครั้งที่เปิด session</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Skills ที่ควรรู้</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Guilding Skill</p>
+        <p class="d">ถามนำทีละขั้น</p>
+        <p class="d">ช่วย Claude เข้าใจบริบทก่อนเริ่มงาน</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Guild-with-Me</p>
+        <p class="d">สร้าง CLAUDE.md อัตโนมัติ</p>
+        <p class="d">จาก interview ที่ Claude ถามผู้ใช้</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Guild-with-Doc</p>
+        <p class="d">จดบริบทลงไฟล์ถาวร</p>
+        <p class="d">ใช้เอกสารที่มีอยู่สร้าง context ได้เลย</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head" style="background:#F5C4B3">
+        <p style="color:#4A1B0C">Project vs Chat</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Cowork = Mount Folder</p>
+        <p class="d">Read/Write ไฟล์บนเครื่องได้โดยตรง</p>
+        <p class="d">ไม่ต้องอัปโหลด — ทำงานกับ local files</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Chat Project</p>
+        <p class="d">Upload ≤100 files เท่านั้น</p>
+        <p class="d">เหมาะกับงานที่ไม่ต้อง write กลับ</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Project = Share Context</p>
+        <p class="d">ข้ามหลาย session ได้</p>
+        <p class="d">CLAUDE.md อยู่ในโปรเจกต์ — โหลดอัตโนมัติ</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head" style="background:#B5D4F4">
+        <p style="color:#042C53">Session Memory</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">Token Limit 200k</p>
+        <p class="d">Sonnet จำได้แค่ 200k token ต่อ session</p>
+        <p class="d">งานยาว = context หาย ถ้าไม่ hand-off</p>
+        <hr/>
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">Hand-off ก่อน Switch</p>
+        <p class="d">สั่ง memory ก่อน new session</p>
+        <p class="d">ป้องกัน context หายเมื่อเปลี่ยนงาน</p>
+        <hr/>
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">CLAUDE.md อัปเดต</p>
+        <p class="d">context persist ข้าม session</p>
+        <p class="d">Claude อ่านทุกครั้ง — ไม่ต้อง brief ซ้ำ</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- ===== SECTION 3: Insight จากพี่ต่าย ===== -->
+<div class="section">
+  <p class="section-title">Insight จากพี่ต่าย</p>
+  <div class="grid-1col">
+
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">วัด Productivity</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">ไม่วัดที่ agent เยอะ</p>
+        <p class="d">จำนวน agent ไม่ใช่ตัวชี้วัด</p>
+        <p class="d">focus ที่ผลลัพธ์โดยรวม</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Output ออกมาเร็ว</p>
+        <p class="d">ภาพรวม speed สำคัญกว่า</p>
+        <p class="d">วัดที่ deliverable จริงที่ส่งได้</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Next Steps</p>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Develop AI ตัวเอง</p>
+        <p class="d">ลงมือทำงาน AI เอง</p>
+        <p class="d">ไม่รอ — เริ่มจากงานจริงที่ทำอยู่</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Check Points</p>
+        <p class="d">ตาม checklist ที่ส่งมา</p>
+        <p class="d">มีจุดเช็คความคืบหน้าชัดเจน</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
