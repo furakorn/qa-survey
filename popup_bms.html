@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Popup States - Modal Type / Successful / Failed</title>
+<style>
+  body{margin:0;background:#000;font-family:'Segoe UI',Arial,sans-serif}
+  .frame{background:#fff;padding:32px;max-width:1100px;margin:0 auto}
+  #tablewrap{display:table;width:100%;border-collapse:separate;border-spacing:0}
+  .row{display:table-row}
+  .row>div{display:table-cell;vertical-align:top;padding:16px 10px;border-top:1px dashed #ddd}
+  .headrow>div{border-top:none;padding-bottom:14px;font-size:12px;font-weight:600;color:#555;text-align:center}
+  .rowlabel{width:110px;font-size:11.5px;font-weight:600;color:#333;padding-top:40px !important;text-align:left}
+  .cell{text-align:center}
+  .modal{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:18px 16px;width:220px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);margin:0 auto 12px}
+  .icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:19px;font-weight:700}
+  .ic-q{background:#FCEACB;color:#E8A33D}
+  .ic-warn{background:#FCEACB;color:#E8A33D}
+  .ic-cross{background:#FBDDDD;color:#E5484D}
+  .ic-check{background:#D6F3E3;color:#20A464}
+  .ic-mail{background:#FCEACB;color:#E8A33D}
+  .m-title{font-size:14px;font-weight:700;color:#222;margin-bottom:4px}
+  .m-desc{font-size:12px;color:#777;line-height:1.45;margin-bottom:2px}
+  .m-note{font-size:10.5px;color:#E5484D;margin-bottom:6px}
+  .m-btns{display:flex;gap:8px;justify-content:center;margin-top:10px}
+  .btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;border:none}
+  .btn-cancel{background:#eee;color:#555}
+  .btn-confirm{background:#F0A93D;color:#fff}
+  .btn-danger{background:#E5484D;color:#fff}
+  .succ-title{font-size:14px;font-weight:700;color:#222;margin:3px 0 4px}
+  .succ-desc{font-size:12px;color:#8a8a8a;line-height:1.45}
+  .fail-title{font-size:14px;font-weight:700;color:#222;margin:3px 0 4px}
+  .ic-fail{width:38px;height:38px;border-radius:50%;background:#FBDDDD;color:#E5484D;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:19px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div id="tablewrap">
+    <div class="row headrow"><div></div><div>Modal Type</div><div>Successful</div><div>Failed</div></div>
+  </div>
+</div>
+
+<script>
+// icon: q = question, warn = warning triangle, cross = x, mail = envelope
+function modalHtml(m) {
+  var iconChar = { q:'?', warn:'\u26A0', cross:'\u2715', mail:'\u2709' }[m.icon] || '?';
+  var iconClass = { q:'ic-q', warn:'ic-warn', cross:'ic-cross', mail:'ic-mail' }[m.icon] || 'ic-q';
+  var confirmClass = m.danger ? 'btn-danger' : 'btn-confirm';
+  return '<div class="modal">' +
+    '<div class="icon ' + iconClass + '">' + iconChar + '</div>' +
+    '<div class="m-title">' + m.title + '</div>' +
+    '<div class="m-desc">' + m.desc + '</div>' +
+    (m.note ? '<div class="m-note">' + m.note + '</div>' : '') +
+    '<div class="m-btns"><button class="btn btn-cancel">Cancel</button><button class="btn ' + confirmClass + '">Confirm</button></div>' +
+    '</div>';
+}
+function successHtml(text) {
+  if (!text) return '';
+  return '<div class="modal">' +
+    '<div class="icon ic-check">\u2713</div>' +
+    '<div class="succ-title">Successfully</div>' +
+    '<div class="succ-desc">' + text + '</div>' +
+    '</div>';
+}
+function failedHtml(show) {
+  if (!show) return '';
+  return '<div class="modal">' +
+    '<div class="ic-fail">\u2715</div>' +
+    '<div class="fail-title">Failed!</div>' +
+    '<div class="succ-desc">Something went wrong. Please try again.</div>' +
+    '<div class="m-btns" style="margin-top:8px"><button class="btn btn-cancel">OK</button></div>' +
+    '</div>';
+}
+
+var rows = [
+  { label:'Submit', modals:[{icon:'q',title:'Submit?',desc:'Do you want to submit the request?'}],
+    success:'Your request has already been submitted.', failed:true },
+  { label:'Save as Draft', modals:[{icon:'q',title:'Save?',desc:'Do you want to save as a draft?'}],
+    success:'Your request has already been saved as a draft.', failed:false },
+  { label:'Discard Change', modals:[{icon:'warn',title:'Discard?',desc:'Do you want to discard?'}],
+    success:'Your request has already been discarded.', failed:false },
+  { label:'Cancel Request', modals:[{icon:'cross',title:'Cancel?',desc:'Do you want to cancel?',danger:true}],
+    success:'Your request has already been cancelled.', failed:false },
+  { label:'Delete Item', modals:[{icon:'cross',title:'Delete?',desc:'Do you want to delete the item?',danger:true}],
+    success:'Your item has already been deleted.', failed:false },
+  { label:'Verify', modals:[{icon:'q',title:'Verify?',desc:'Do you want to verify the request?'}],
+    success:'Your request has already been verified.', failed:false },
+  { label:'Approve', modals:[{icon:'q',title:'Approve?',desc:'Do you want to approve the request?'}],
+    success:'Your request has already been approved.', failed:false },
+  { label:'Distribute Budget', modals:[{icon:'q',title:'Distribute Budget?',desc:'Do you want to distribute budget?'}],
+    success:'Your budget has already been distributed.', failed:false },
+  { label:'Create IVM', modals:[{icon:'q',title:'Create IVM?',desc:'Do you want to create IVM?'}],
+    success:'Your IVM has already been created.', failed:false },
+  { label:'Create WBS', modals:[{icon:'q',title:'Create WBS?',desc:'Do you want to create WBS?',note:'Please make sure WBS Level 1 is created on SAP'}],
+    success:'Your WBS has already been created.', failed:false },
+  { label:'Release WBS', modals:[{icon:'q',title:'Release WBS?',desc:'Do you want to release WBS?'}],
+    success:'Your WBS has already been released.', failed:false },
+  { label:'Reject', modals:[{icon:'cross',title:'Reject?',desc:'Do you want to reject the request?',danger:true}],
+    success:'Your request has already been rejected.', failed:false },
+  { label:'Complete&Send Mail', modals:[
+      {icon:'mail',title:'Complete and Send Email?',desc:'Do you want to confirm and send email?'},
+      {icon:'q',title:'Complete?',desc:'Do you want to complete?'}
+    ], success:'Your request has already been completed.', failed:false },
+  { label:'Save Data', modals:[{icon:'q',title:'Save?',desc:'Do you want to save?'}],
+    success:'Your data has already been saved.', failed:false },
+  { label:'Resend Mail', modals:[{icon:'mail',title:'Resend Email?',desc:'Do you want to resend the email?'}],
+    success:'Your email has already been resent.', failed:false },
+  { label:'Transfer', modals:[{icon:'q',title:'Transfer?',desc:'Do you want to transfer the budget?'}],
+    success:'Your budget has already been transferred.', failed:false },
+  { label:'Switch Type', modals:[
+      {icon:'warn',title:'Switch CAPEX Type?',desc:'Do you want to switch CAPEX type?',note:'All data will be cleared'},
+      {icon:'warn',title:'Switch Allocate Type?',desc:'Do you want to switch allocate type?',note:'All data will be cleared'}
+    ], success:'Your CAPEX type has already been switched.', success2:'Your allocate type has already been switched.', failed:false },
+  { label:'POST', modals:[{icon:'q',title:'POST?',desc:'Do you want to post the request?'}],
+    success:'Your request has already been posted.', failed:false },
+  { label:'Return', modals:[{icon:'cross',title:'Return?',desc:'Do you want to return the request?',danger:true}],
+    success:'Your request has already been returned.', failed:false }
+];
+
+var out = '';
+rows.forEach(function(r) {
+  var modalsCell = r.modals.map(modalHtml).join('');
+  var successCell = successHtml(r.success) + (r.success2 ? successHtml(r.success2) : '');
+  var failedCell = failedHtml(r.failed);
+  out += '<div class="row">' +
+    '<div class="rowlabel">' + r.label + '</div>' +
+    '<div class="cell">' + modalsCell + '</div>' +
+    '<div class="cell">' + successCell + '</div>' +
+    '<div class="cell">' + failedCell + '</div>' +
+    '</div>';
+});
+document.getElementById('tablewrap').insertAdjacentHTML('beforeend', out);
+</script>
+</body>
+</html>
