@@ -64,12 +64,12 @@ function successHtml(text) {
     '<div class="succ-desc">' + text + '</div>' +
     '</div>';
 }
-function failedHtml(show) {
+function failedHtml(show, msg) {
   if (!show) return '';
   return '<div class="modal">' +
     '<div class="ic-fail">\u2715</div>' +
     '<div class="fail-title">Failed!</div>' +
-    '<div class="succ-desc">Something went wrong. Please try again.</div>' +
+    '<div class="succ-desc">' + (msg || 'Something went wrong. Please try again.') + '</div>' +
     '<div class="m-btns" style="margin-top:8px"><button class="btn btn-cancel">OK</button></div>' +
     '</div>';
 }
@@ -90,11 +90,11 @@ var rows = [
   { label:'Approve', modals:[{icon:'q',title:'Approve?',desc:'Do you want to approve the request?'}],
     success:'Your request has already been approved.', failed:false },
   { label:'Distribute Budget', modals:[{icon:'q',title:'Distribute Budget?',desc:'Do you want to distribute budget?'}],
-    success:'Your budget has already been distributed.', failed:false },
+    success:'Your budget has already been distributed.', failed:true, failMsg:'Unable to distribute budget. Please try again.' },
   { label:'Create IVM', modals:[{icon:'q',title:'Create IVM?',desc:'Do you want to create IVM?'}],
-    success:'Your IVM has already been created.', failed:false },
+    success:'Your IVM has already been created.', failed:true, failMsg:'Unable to create IVM. Please try again.' },
   { label:'Create WBS', modals:[{icon:'q',title:'Create WBS?',desc:'Do you want to create WBS?',note:'Please make sure WBS Level 1 is created on SAP'}],
-    success:'Your WBS has already been created.', failed:false },
+    success:'Your WBS has already been created.', failed:true, failMsg:'Unable to create WBS. Please try again.' },
   { label:'Release WBS', modals:[{icon:'q',title:'Release WBS?',desc:'Do you want to release WBS?'}],
     success:'Your WBS has already been released.', failed:false },
   { label:'Reject', modals:[{icon:'cross',title:'Reject?',desc:'Do you want to reject the request?',danger:true}],
@@ -118,14 +118,14 @@ var rows = [
   { label:'Return', modals:[{icon:'cross',title:'Return?',desc:'Do you want to return the request?',danger:true}],
     success:'Your request has already been returned.', failed:false },
   { label:'Repost', modals:[{icon:'q',title:'Repost?',desc:'Do you want to repost the request?'}],
-    success:'Your request has already been reposted.', failed:false }
+    success:'Your request has already been reposted.', failed:true, failMsg:'Unable to repost the request. Please try again.' }
 ];
 
 var out = '';
 rows.forEach(function(r) {
   var modalsCell = r.modals.map(modalHtml).join('');
   var successCell = successHtml(r.success) + (r.success2 ? successHtml(r.success2) : '');
-  var failedCell = failedHtml(r.failed);
+  var failedCell = failedHtml(r.failed, r.failMsg);
   out += '<div class="row">' +
     '<div class="rowlabel">' + r.label + '</div>' +
     '<div class="cell">' + modalsCell + '</div>' +
