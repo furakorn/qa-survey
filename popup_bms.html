@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Popup States - Modal Type / Successful / Failed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;background:#000;font-family:'Segoe UI',Arial,sans-serif}
+  body{margin:0;background:#000;font-family:'Noto Sans',Arial,sans-serif}
   .frame{background:#fff;padding:32px;max-width:1100px;margin:0 auto}
   #tablewrap{display:table;width:100%;border-collapse:separate;border-spacing:0}
   .row{display:table-row}
@@ -20,7 +22,7 @@
   .ic-check{background:#D6F3E3;color:#20A464}
   .ic-mail{background:#FCEACB;color:#E8A33D}
   .m-title{font-size:14px;font-weight:700;color:#222;margin-bottom:4px}
-  .m-desc{font-size:12px;color:#777;line-height:1.45;margin-bottom:2px}
+  .m-desc{font-size:12px;font-weight:400;color:#777;line-height:20px;text-align:center;margin-bottom:2px}
   .m-note{font-size:10.5px;color:#E5484D;margin-bottom:6px}
   .m-btns{display:flex;gap:8px;justify-content:center;margin-top:10px}
   .btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;border:none}
@@ -28,7 +30,7 @@
   .btn-confirm{background:#F0A93D;color:#fff}
   .btn-danger{background:#E5484D;color:#fff}
   .succ-title{font-size:14px;font-weight:700;color:#222;margin:3px 0 4px}
-  .succ-desc{font-size:12px;color:#8a8a8a;line-height:1.45}
+  .succ-desc{font-size:12px;font-weight:400;color:#8a8a8a;line-height:20px;text-align:center}
   .fail-title{font-size:14px;font-weight:700;color:#222;margin:3px 0 4px}
   .ic-fail{width:38px;height:38px;border-radius:50%;background:#FBDDDD;color:#E5484D;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:19px;font-weight:700}
 </style>
@@ -114,7 +116,9 @@ var rows = [
   { label:'POST', modals:[{icon:'q',title:'POST?',desc:'Do you want to post the request?'}],
     success:'Your request has already been posted.', failed:false },
   { label:'Return', modals:[{icon:'cross',title:'Return?',desc:'Do you want to return the request?',danger:true}],
-    success:'Your request has already been returned.', failed:false }
+    success:'Your request has already been returned.', failed:false },
+  { label:'Repost', modals:[{icon:'q',title:'Repost?',desc:'Do you want to repost the request?'}],
+    success:'Your request has already been reposted.', failed:false }
 ];
 
 var out = '';
