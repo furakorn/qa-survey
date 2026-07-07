@@ -77,6 +77,8 @@ function failedHtml(show, msg) {
 var rows = [
   { label:'Send to Submit', modals:[{icon:'q',title:'Send to Submit?',desc:'Do you want to send to submit the request?'}],
     success:'Your request has already been sent to submit.', failed:false },
+  { label:'Send Back', modals:[{icon:'cross',title:'Send Back?',desc:'Do you want to send back the request?',danger:true}],
+    success:'Your request has already been sent back.', failed:false },
   { label:'Submit', modals:[{icon:'q',title:'Submit?',desc:'Do you want to submit the request?'}],
     success:'Your request has already been submitted.', failed:true },
   { label:'Save as Draft', modals:[{icon:'q',title:'Save?',desc:'Do you want to save as a draft?'}],
