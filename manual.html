@@ -518,9 +518,18 @@ async function generateManual() {
 
   const systemPrompt = `Technical writer: bilingual (Thai/EN) User Manual.
 SYSTEM: ${sysName||'System'}${section?' | '+section:''}${ctx?' | '+ctx:''}
-Return ONLY valid JSON:
-{"step_number":1,"title_th":"5-8คำ","title_en":"4-7 words","description_th":"1-2ประโยค","description_en":"1-2 sentences.","action_steps_th":["1. ..."],"action_steps_en":["1. ..."],"fields_required":["Field (Type) *"],"fields_optional":["Field (Type)"]}
-Rules: fields_required=label with *, fields_optional=no *. Format: "Name (Text/Dropdown/Checkbox/Radio/Button)". List ALL visible fields.
+Return ONLY valid JSON, in this exact key order:
+{"step_number":1,"title_th":"5-8คำ","title_en":"4-7 words","fields_required":["Field (Type) *"],"fields_optional":["Field (Type)"],"description_th":"1-2ประโยค","description_en":"1-2 sentences.","action_steps_th":["1. ..."],"action_steps_en":["1. ..."]}
+
+FIELD DETECTION RULES (check very carefully, this is the most important part):
+1. Scan the ENTIRE image top to bottom, left to right — including inside tables/rows. Every column in a data table that has an input (dropdown, text box, checkbox, tag) is also a field, not just standalone labeled fields.
+2. For EVERY single field — regardless of type (Text, Dropdown, Radio, Checkbox, Button, Tag, table column) — look specifically for a small red asterisk (*) right next to or after the label text. Check this for ALL field types equally; required markers appear on Radio/Dropdown/Checkbox/Tag fields just as often as on Text fields, so do not assume only Text fields can be required.
+3. A field having a pre-selected/default value (e.g. a radio button already checked, a dropdown showing a value) does NOT make it optional. Only the presence or absence of the red * decides fields_required vs fields_optional.
+4. When a table has MULTIPLE column headers side-by-side (e.g. "Company *" next to "Role *"), check the asterisk of EACH column header INDEPENDENTLY — do not assume a column shares the same required/optional status as its neighboring column. Look at each column header individually, one at a time, left to right, as if it were a separate question.
+5. fields_required = every field whose label has a red *. fields_optional = every field with no *.
+6. List ALL visible fields with no omissions, even if there are 10+ fields or they are inside a repeating table row. Missing fields is a critical error.
+Format each entry as: "Name (Text/Dropdown/Checkbox/Radio/Button/Tag)".
+
 description_th/description_en: อธิบายภาพรวมหน้าจอนี้ทำอะไร 2-3 ประโยค ให้ละเอียดพอเข้าใจโดยไม่ต้องดูรูป.
 STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fields, buttons, or content that are not clearly visible. If no form fields exist in the image, fields_required and fields_optional MUST be empty arrays [].`;
 
@@ -535,7 +544,7 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
     // delay ระหว่าง step เพื่อหลีกเลี่ยง rate limit
     if (i > 0) await new Promise(function(r){ setTimeout(r, 20000); });
 
-    var resized = await resizeImage(f.file, 1024);
+    var resized = await resizeImage(f.file, 1280);
     var b64 = resized.b64;
     var mt  = resized.mt;
 
@@ -550,7 +559,7 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
           model: 'qwen/qwen3.6-27b',
-          max_tokens: 600,
+          max_tokens: 1200,
           temperature: 0.3,
           reasoning_effort: 'none',
           reasoning_format: 'hidden',
@@ -782,7 +791,7 @@ async function exportWord() {
       var kwn = o.keepWithNext ? '<w:keepWithNext/>' : '';
       // noproof: ปิด spell check
       var noproof = '<w:noproof/><w:lang w:val="th-TH" w:bidi="th-TH"/>';
-      return '<w:p><w:pPr>' + st + '<w:spacing w:before="' + bef + '" w:after="' + aft + '"/>' + sh + kwn + '</w:pPr>'
+      return '<w:p><w:pPr>' + st + kwn + '<w:spacing w:before="' + bef + '" w:after="' + aft + '"/>' + sh + '</w:pPr>'
            + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
            + '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' + b + it + col + noproof + '</w:rPr>'
            + '<w:t xml:space="preserve">' + x(text) + '</w:t></w:r></w:p>';
@@ -936,7 +945,8 @@ async function exportWord() {
         if (reqFields.length > 0) {
           body += p('Required Fields', { bold:true, size:22, color:'A32D2D', before:80, after:20, keepWithNext:true });
           for (var fi=0; fi<reqFields.length; fi++) {
-            body += '<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/></w:pPr>'
+            var reqKwn = (fi < reqFields.length - 1) ? '<w:keepNext/>' : '';
+            body += '<w:p><w:pPr><w:keepLines/>' + reqKwn + '<w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/></w:pPr>'
               + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
               + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="A32D2D"/><w:b/><w:bCs/>'
               + '<w:noproof/></w:rPr>'
@@ -946,7 +956,8 @@ async function exportWord() {
         if (optFields.length > 0) {
           body += p('Optional Fields', { bold:true, size:22, color:'5F5E5A', before:60, after:20, keepWithNext:true });
           for (var fi2=0; fi2<optFields.length; fi2++) {
-            body += '<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/></w:pPr>'
+            var optKwn = (fi2 < optFields.length - 1) ? '<w:keepNext/>' : '';
+            body += '<w:p><w:pPr><w:keepLines/>' + optKwn + '<w:ind w:left="360"/><w:spacing w:before="20" w:after="20"/></w:pPr>'
               + '<w:r><w:rPr><w:rFonts w:ascii="TH SarabunPSK" w:hAnsi="TH SarabunPSK" w:cs="TH SarabunPSK"/>'
               + '<w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="5F5E5A"/>'
               + '<w:noproof/></w:rPr>'
