@@ -484,9 +484,11 @@ async function generateManual() {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'qwen/qwen3.6-27b',
           max_tokens: 300,
           temperature: 0.3,
+          reasoning_effort: 'none',
+          reasoning_format: 'hidden',
           messages: [
             { role: 'system', content: 'Translate the given Thai text into natural, professional English suitable for a technical user manual. Return ONLY the translated English text, nothing else.' },
             { role: 'user', content: overviewText.trim() }
@@ -531,25 +533,27 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
     document.getElementById('progressLabel').textContent = 'กำลังวิเคราะห์รูปที่ ' + (i+1) + ' / ' + files.length + (templateInfo ? ' [Template]' : '') + '...';
 
     // delay ระหว่าง step เพื่อหลีกเลี่ยง rate limit
-    if (i > 0) await new Promise(function(r){ setTimeout(r, 8000); });
+    if (i > 0) await new Promise(function(r){ setTimeout(r, 20000); });
 
     var resized = await resizeImage(f.file, 1024);
     var b64 = resized.b64;
     var mt  = resized.mt;
 
     async function callAPI(retryCount) {
-      var waitMs = retryCount === 0 ? 0 : (retryCount * 40000);
+      var waitMs = retryCount === 0 ? 0 : Math.min(60000, 5000 * Math.pow(2, retryCount - 1));
       if (waitMs > 0) {
-        document.getElementById('progressLabel').textContent = 'Rate limit — รอ ' + (waitMs/1000) + 's แล้วลองใหม่... (รูปที่ ' + (i+1) + ')';
+        document.getElementById('progressLabel').textContent = 'Server ไม่ว่าง — รอ ' + (waitMs/1000) + 's แล้วลองใหม่... (รูปที่ ' + (i+1) + ')';
         await new Promise(function(r){ setTimeout(r, waitMs); });
       }
       var resp = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'qwen/qwen3.6-27b',
           max_tokens: 600,
           temperature: 0.3,
+          reasoning_effort: 'none',
+          reasoning_format: 'hidden',
           messages: (function() {
             var msgs = [{ role: 'system', content: systemPrompt }];
             if (templateInfo && templateInfo.text) {
@@ -564,9 +568,9 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
           })()
         })
       });
-      if (resp.status === 429) {
-        if (retryCount < 4) return callAPI(retryCount + 1);
-        throw new Error('Rate limit exceeded after retries');
+      if (resp.status === 429 || resp.status === 503) {
+        if (retryCount < 5) return callAPI(retryCount + 1);
+        throw new Error(resp.status === 503 ? 'Model over capacity (503) หลัง retry ครบแล้ว' : 'Rate limit exceeded after retries');
       }
       var data = await resp.json();
       if (data.error) throw new Error(data.error.message || 'API error');
@@ -601,8 +605,10 @@ STRICT: Only describe what is VISIBLE in the image. Do NOT invent or assume fiel
           method: 'POST',
           headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
           body: JSON.stringify({
-            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            model: 'qwen/qwen3.6-27b',
             max_tokens: 500,
+            reasoning_effort: 'none',
+            reasoning_format: 'hidden',
             messages: [
               { role: 'system', content: 'You are a technical writer. Analyze the screenshot and return ONLY valid JSON with keys: step_number, title_th, title_en, description_th, description_en, ui_elements. Never return empty values.' },
               { role: 'user', content: [
