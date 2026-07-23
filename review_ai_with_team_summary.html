@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Review AI With Team — Pain Points Summary</title>
+<style>
+  body { font-family: sans-serif; background: #F9F9FB; margin: 0; padding: 20px 24px; }
+  .section-title {
+    text-align: center; font-size: 14px; font-weight: 600; color: #26215C;
+    background: #EEEDFE; border: 1px solid #534AB7; border-radius: 24px;
+    padding: 7px 22px; margin: 0 auto 16px;
+    display: block; width: fit-content;
+  }
+  .section { margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 760px; margin: auto; }
+  .card { border-radius: 12px; overflow: hidden; border: 0.5px solid #ddd; }
+  .head { padding: 9px 14px; }
+  .head p { margin: 0; font-size: 13px; font-weight: 600; }
+  .head small { font-size: 10px; font-weight: 400; opacity: 0.75; display: block; margin-top: 1px; }
+  .body { padding: 10px 14px; background: #fff; }
+  .sub { font-size: 11px; font-weight: 600; margin: 0 0 3px; padding-left: 8px;
+         border-left-style: solid; border-left-width: 3px; }
+  .d { font-size: 10px; color: #555; margin: 1px 0 1px 16px; line-height: 1.5; }
+  .d::before { content: "·  "; }
+  hr { margin: 8px 0; border: none; border-top: 0.5px solid #eee; }
+  .divider { border: none; border-top: 1.5px dashed #D0CCF0;
+             max-width: 760px; margin: 0 auto 28px; }
+  .merge-tag { display: inline-block; background: #F0F4FF; border: 0.5px solid #B0BFFF;
+               border-radius: 8px; font-size: 9px; color: #3A4FAA; padding: 1px 7px;
+               margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<!-- ===== SECTION 1: QA ===== -->
+<div class="section">
+  <p class="section-title">QA</p>
+  <div class="grid">
+
+    <!-- Card 1: Teal -->
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">Khwanruethai Waijampa + Panita Dokpikul<span class="merge-tag">merged</span></p>
+        <small style="color:#085041">QA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Pain Point</p>
+        <p class="d">Spec/requirement มาจากหลายไฟล์ → ต้องเปิดดูเองทีละอัน</p>
+        <p class="d">ใช้เวลานาน + testcase ยังตกหล่น / ครอบคลุมไม่ครบ</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Khwanruethai — สิ่งที่ทำ</p>
+        <p class="d">ดึง spec จาก SA → แปลงเป็นไฟล์ .md</p>
+        <p class="d">ให้ AI อ่าน spec → generate testcase ออกมา</p>
+        <p class="d">ยังต้อง tune เพิ่มเติม บางจุดยังไม่ถูกต้อง</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Panita — แนวทาง</p>
+        <p class="d">ส่ง requirement จาก SA ให้ AI วิเคราะห์</p>
+        <p class="d">ให้ AI propose testcase ที่ขาดหายไป</p>
+        <p class="d">Cross-check กับ testcase ที่มีอยู่แล้ว</p>
+      </div>
+    </div>
+
+    <!-- Card 2: Amber -->
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Furakorn Arunkamol</p>
+        <small style="color:#412402">QA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Pain Point</p>
+        <p class="d">ต้องทำ QA end-user manual ทีละหน้าเอง ทุกโปรเจกต์</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">สิ่งที่ทำแล้ว</p>
+        <p class="d">ใช้ Groq API (free, ไม่มี limit) สร้าง tool รับ screenshot</p>
+        <p class="d">AI วิเคราะห์ฟิลด์ required → generate report อัตโนมัติ</p>
+        <p class="d">เพิ่ม add-on: กรอบแต่ละ step + description ภาษาอังกฤษ</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Next Step</p>
+        <p class="d">ต้องการ tool กลางที่ทีมร่วม develop และ adapt ได้</p>
+        <p class="d">ระวัง: ข้อมูล business ที่ยัดเข้า AI อาจ leak</p>
+      </div>
+    </div>
+
+    <!-- Card 3: Coral -->
+    <div class="card">
+      <div class="head" style="background:#F5C4B3">
+        <p style="color:#4A1B0C">Kitsanun Naksanit</p>
+        <small style="color:#4A1B0C">QA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Pain Point</p>
+        <p class="d">Log defect ใน Azure DevOps — แม้มี template แต่ต้องพิมพ์ซ้ำทุกครั้ง ใช้เวลานาน</p>
+        <p class="d">มี issue file หลายไฟล์ข้ามหลาย module — ไม่ทราบ status รวมของแต่ละ module</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">แนวทาง</p>
+        <p class="d">ใช้ AI ช่วย log defect อัตโนมัติจาก template มาตรฐานที่ทีมตกลงร่วมกัน → ลดเวลาพิมพ์</p>
+        <p class="d">AI tag issue แต่ละรายการ: module, status, จำนวนที่ค้างอยู่ → เห็นภาพรวมได้ทันที</p>
+        <p class="d">Next step: คุยกับทีม QA เพื่อตกลง issue template กลาง ก่อน deploy ใช้จริง</p>
+      </div>
+    </div>
+
+    <!-- Card 4: Blue -->
+    <div class="card">
+      <div class="head" style="background:#B5D4F4">
+        <p style="color:#042C53">Kitiyapon Wisetthee</p>
+        <small style="color:#042C53">QA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">Pain Point</p>
+        <p class="d">ต้องตรวจ PDF หลายไฟล์จากหลายฝ่าย — ไม่มี template มาตรฐานกำหนดว่า action ที่ถูกต้องควรเป็นอย่างไร</p>
+        <p class="d">Timeline กระชั้น → ตัดสินใจตรวจ manual เพราะเร็วกว่าการ setup AI ในขณะนั้น</p>
+        <hr/>
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">แนวทาง (Plan)</p>
+        <p class="d">รวบรวมปัญหาที่เคยพบใน project ปัจจุบัน → ให้ AI ใช้เป็น reference ตรวจสอบ project ถัดไป</p>
+        <p class="d">สร้าง AI skill สำหรับตรวจ PDF ประเภทเดิมซ้ำ → ลดเวลาและเพิ่มความสม่ำเสมอ</p>
+      </div>
+    </div>
+
+    <!-- Card 5: Teal -->
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">Matimon Noradee</p>
+        <small style="color:#085041">QA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Pain Point</p>
+        <p class="d">สร้าง pre-test data สำหรับระบบ BMS (ขอเบิกงบประมาณ) ช้า</p>
+        <p class="d">ต้องกรอกหลาย field — ข้อมูลที่กรอกไม่เสมือนจริง</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">แนวทาง</p>
+        <p class="d">ให้ AI generate ข้อมูล test ที่สมจริงตามประเภทงบ</p>
+        <p class="d">ใช้ Playwright กรอกข้อมูลผ่านหน้าจออัตโนมัติ</p>
+        <p class="d">ลดเวลาสร้าง pre-data ต่อ 1 ใบได้อย่างมีนัย</p>
+      </div>
+    </div>
+
+    <!-- Card 6: Amber -->
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Noraseth Imaob</p>
+        <small style="color:#412402">Tester</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Pain Point</p>
+        <p class="d">ใช้ AI สร้าง form, สรุปประชุม และจัดการ data — แต่ไม่ได้บอกให้ AI จำ pattern ไว้</p>
+        <p class="d">พอทำใหม่ AI เปลี่ยน format/output เองทุกครั้ง → ผลไม่สอดคล้องกัน</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">แนวทาง</p>
+        <p class="d">สร้าง skill / memory ให้ AI จำ pattern ที่ตกลงไว้ → ทุก session ใช้ format เดิม</p>
+        <p class="d">ถ้ามี change ก็แค่อัปเดต skill เดิม แทนการสอนซ้ำทุกครั้ง</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- ===== SECTION 2: SA ===== -->
+<div class="section">
+  <p class="section-title">SA</p>
+  <div class="grid">
+
+    <!-- Card 1: Teal -->
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">Atthapol Srivachirangkun</p>
+        <small style="color:#085041">SA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Pain Point</p>
+        <p class="d">Requirement มาจากหลายทาง (ลูกค้า, end-user) → estimate ไม่แม่น</p>
+        <p class="d">Input กระจัดกระจาย หลาย stakeholder แต่ละคนมี input/output ต่างกัน</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">แนวทางปัจจุบัน</p>
+        <p class="d">ใช้ชุดคำถามตีกรอบ requirement ครอบคลุม ~5-6 มิติ — เช่น scope, stakeholder, constraint</p>
+        <p class="d">รวบรวมคำตอบแต่ละมิติ → ให้ AI compile เป็น estimate cost</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Vision (ยังทำไม่เป็น)</p>
+        <p class="d">CMMI-based: Sales/PM/BA/SA → แต่ละบทบาทมี agent เป็นของตัวเอง</p>
+        <p class="d">Agent ทำงานต่อกัน → ได้ document presale ออกมาครบ</p>
+        <p class="d">Human-in-the-loop ตรงจุดที่ต้องตัดสินใจ</p>
+      </div>
+    </div>
+
+    <!-- Card 2: Amber -->
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Narongsak Taprom</p>
+        <small style="color:#412402">SA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Pain Point</p>
+        <p class="d">Impact analysis ของ stored procedure ไม่ครบ</p>
+        <p class="d">บาง testcase ตกหล่น — ไม่รู้จนเจอ defect ภายหลัง</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">แนวทาง</p>
+        <p class="d">ให้ AI วิเคราะห์ stored procedure → ระบุ test case ที่อาจตกหล่น</p>
+        <p class="d">แยก 2 โฟลเดอร์: โฟลเดอร์ structure (schema) + โฟลเดอร์ตัวอย่างข้อมูล → AI อ่านได้โดยไม่ต้อง connect DB โดยตรง</p>
+        <p class="d">รวมข้อมูลไว้ในที่เดียว → ตอบคำถามได้ครบโดยไม่ต้องถามซ้ำ</p>
+      </div>
+    </div>
+
+    <!-- Card 3: Coral -->
+    <div class="card">
+      <div class="head" style="background:#F5C4B3">
+        <p style="color:#4A1B0C">Suvalak Vijitponkun + Perapong Markaew<span class="merge-tag">merged</span></p>
+        <small style="color:#4A1B0C">SA / Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Pain Point</p>
+        <p class="d">Business knowledge กระจายอยู่หลายเอกสาร version ไม่ชัดเจน</p>
+        <p class="d">ผูกอยู่กับ SA คนเดียว — QA/support query ไม่ได้</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Suvalak — แนวทาง</p>
+        <p class="d">โยน SRS เข้า AI → ให้ AI ถาม-ตอบ จนเข้าใจ context</p>
+        <p class="d">ชน knowledge SA vs Dev → หา conflict / สอดคล้องกัน</p>
+        <p class="d">พอมี change → AI วิเคราะห์ impact ได้ทันที (Pilot อยู่)</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Perapong — แนวทาง</p>
+        <p class="d">SRS + code + meeting email → generate tech documentation</p>
+        <p class="d">AI แยก "fact" vs "assumption/opinion" ชัดเจนในไฟล์</p>
+        <p class="d">ใช้เป็นจุดตั้งต้นก่อน dev รอบต่อไป</p>
+      </div>
+    </div>
+
+    <!-- Card 4: Blue -->
+    <div class="card">
+      <div class="head" style="background:#B5D4F4">
+        <p style="color:#042C53">Jetsada Chanthaphoon</p>
+        <small style="color:#042C53">SA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">Pain Point</p>
+        <p class="d">ต้องจัดทำเอกสารส่งมอบโครงการหลายประเภท แต่ยังไม่มี template หรือข้อมูลตั้งต้นเลย</p>
+        <p class="d">เอกสารแต่ละประเภทมาจากหลายแหล่ง — จัดการและ track ยาก</p>
+        <hr/>
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">แนวทาง</p>
+        <p class="d">นำตัวอย่างเอกสารที่มีอยู่ให้ AI ทำความเข้าใจ → ใช้เป็นต้นแบบสร้างเอกสารประเภทใหม่</p>
+        <p class="d">ให้ AI สร้างเอกสารส่งมอบหลายประเภทต่อเนื่องกัน โดย reference ตัวอย่างชุดเดิม</p>
+      </div>
+    </div>
+
+    <!-- Card 5: Teal -->
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">Dechrith Thanpaew</p>
+        <small style="color:#085041">SA</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Pain Point</p>
+        <p class="d">Data duplication bugs → debug ด้วยมือ (ดึง production data มาจำลอง)</p>
+        <p class="d">ต้องการ AI ที่รู้ context ทั้งแอป "การท่าเรือ" ไม่ต้องสอนซ้ำทุกครั้ง</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">แนวทาง</p>
+        <p class="d">สอน AI ทีละ module → ให้มันรู้ว่าโปรแกรมทำหน้าที่อะไร</p>
+        <p class="d">ต้องการ AI consult ได้ใน "ภาษาของระบบเรา" โดยไม่ต้องอธิบาย context ซ้ำ</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- ===== SECTION 3: Dev ===== -->
+<div class="section">
+  <p class="section-title">Dev</p>
+  <div class="grid">
+
+    <!-- Card 1: Teal -->
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">Jannarin Meethong</p>
+        <small style="color:#085041">Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Pain Point</p>
+        <p class="d">ต้องสอน AI context ระบบใหม่ทุก session — เช่น เราใช้ stored procedure, table ชื่ออะไร, structure เป็นยังไง</p>
+        <p class="d">AI เขียน tool code (เช่น API call) ซ้ำทุกครั้ง → เปลือง token และเวลา</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">แนวทาง</p>
+        <p class="d">สร้าง skill .md ที่บรรจุ context ระบบ (tech stack, table structure, stored procedure) → เรียกใช้ทุก session โดยไม่ต้องสอนซ้ำ</p>
+        <p class="d">บันทึก tool file ที่ AI เขียน (เช่น API call script) → session ถัดไปเรียกใช้ได้เลย ไม่เสีย token เขียนใหม่</p>
+        <p class="d">ใช้ "loop" skill: AI อ่าน task → เลือก sub-agent ที่เหมาะสม → dispatch ไปทำงาน → รอผลแล้วรวมกลับ</p>
+      </div>
+    </div>
+
+    <!-- Card 2: Amber -->
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Krirerk Chootiang</p>
+        <small style="color:#412402">Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Pain Point</p>
+        <p class="d">แต่ละคนสร้าง knowledge base ต่างกัน → ผลวิเคราะห์ต่างกัน</p>
+        <p class="d">อยากได้ knowledge กลาง: Frontend + Backend + Business</p>
+        <p class="d">ทุก role (Dev/QA) อ่านจากแหล่งเดียว — ได้ผลสอดคล้องกัน</p>
+      </div>
+    </div>
+
+    <!-- Card 3: Coral -->
+    <div class="card">
+      <div class="head" style="background:#F5C4B3">
+        <p style="color:#4A1B0C">WAROON LARPSRISAWAD</p>
+        <small style="color:#4A1B0C">Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Pain Point</p>
+        <p class="d">ใช้ AI review logic ของโค้ด แต่ prompt quality ยังไม่ดีพอ</p>
+        <p class="d">ผลลัพธ์ที่ได้ต้อง iterate หลายรอบกว่าจะถูก — เสียเวลา</p>
+        <hr/>
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">แนวทาง</p>
+        <p class="d">ต้องการพัฒนาทักษะการเขียน prompt ที่แม่นยำขึ้น</p>
+        <p class="d">ลด iteration loop ด้วยการให้ context ที่ชัดขึ้นตั้งแต่ต้น</p>
+      </div>
+    </div>
+
+    <!-- Card 4: Blue -->
+    <div class="card">
+      <div class="head" style="background:#B5D4F4">
+        <p style="color:#042C53">Daranee Netkeaw</p>
+        <small style="color:#042C53">Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">Pain Point</p>
+        <p class="d">Deploy code แต่ละ environment (dev/uat/prod) มี config ต่างกัน → ต้องปรับ manual ทุกครั้ง</p>
+        <p class="d">Rollback ช้าและ error-prone เพราะขั้นตอนกระจัดกระจาย</p>
+        <hr/>
+        <p class="sub" style="color:#042C53;border-left-color:#85B7EB">แนวทาง</p>
+        <p class="d">ให้ AI ช่วย generate deploy script ที่ปรับ config ตาม environment อัตโนมัติ</p>
+        <p class="d">ลดขั้นตอน manual และความเสี่ยง config ผิดในแต่ละ environment</p>
+      </div>
+    </div>
+
+    <!-- Card 5: Teal -->
+    <div class="card">
+      <div class="head" style="background:#9FE1CB">
+        <p style="color:#04342C">Sitthisak Thanyachatthatree</p>
+        <small style="color:#085041">Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">Pain Point</p>
+        <p class="d">หา root cause ของ issue ช้า — ต้องไล่อ่านไฟล์ยาวเองก่อน จึงจะรู้จุดที่ต้องแก้</p>
+        <p class="d">ใช้ AI เป็น pair-programmer แต่ AI ลืม context ระหว่าง session → ต้องอธิบายซ้ำ</p>
+        <hr/>
+        <p class="sub" style="color:#085041;border-left-color:#5DCAA5">แนวทาง</p>
+        <p class="d">ให้ AI วิเคราะห์ไฟล์ก่อน 1 รอบ → point ตำแหน่งที่น่าสงสัย → แล้วค่อยถามต่อ</p>
+        <p class="d">ใช้ Claude Code (VS Code) คุยกับ AI ต่อเนื่องทีละ section — ไม่ต้องเริ่มใหม่ทุกครั้ง</p>
+      </div>
+    </div>
+
+    <!-- Card 6: Amber -->
+    <div class="card">
+      <div class="head" style="background:#FAC775">
+        <p style="color:#412402">Pollakrit Bunrat</p>
+        <small style="color:#412402">Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">Pain Point</p>
+        <p class="d">ทำงานหลายหัวข้อพร้อมกัน มีงาน ad hoc เข้ามาระหว่าง session → จำงานตัวเองไม่ค่อยได้</p>
+        <p class="d">ไม่มีที่จัด priority ของงานที่คั่งค้างอยู่ทั้งหมด</p>
+        <hr/>
+        <p class="sub" style="color:#412402;border-left-color:#EF9F27">แนวทาง</p>
+        <p class="d">ต้องการให้ AI เตือนความจำ และจัด priority งานข้ามหลาย session</p>
+        <p class="d">ใช้ AI ช่วย handoff งาน — สรุปสิ่งที่ทำไปแล้ว + สิ่งที่ยังค้างให้ชัดเจน</p>
+      </div>
+    </div>
+
+    <!-- Card 7: Coral -->
+    <div class="card">
+      <div class="head" style="background:#F5C4B3">
+        <p style="color:#4A1B0C">Pornphan Pordeengarm</p>
+        <small style="color:#4A1B0C">Dev</small>
+      </div>
+      <div class="body">
+        <p class="sub" style="color:#4A1B0C;border-left-color:#D85A30">Pain Point</p>
+        <p class="d">ยังไม่มี pain point ที่ต้องการแก้ด้วย AI ในตอนนี้</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
