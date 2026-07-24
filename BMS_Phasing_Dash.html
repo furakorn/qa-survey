@@ -276,9 +276,16 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color:
   </div>
 
   <div class="card">
-    <div class="card-head">
+    <div class="card-head" style="flex-wrap:wrap;gap:8px">
       <span class="card-icon">🔖</span><h2>Milestone per Task</h2>
-      <div class="filter-wrap" id="bmsFilterBar"></div>
+      <div style="flex:1;min-width:100%;display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-top:6px;border-top:1px solid var(--border);margin-top:2px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap">Module:</span>
+        <div class="filter-wrap" id="bmsFilterBar"></div>
+      </div>
+      <div style="flex:1;min-width:100%;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap">Status:</span>
+        <div class="filter-wrap" id="bmsStatusBar"></div>
+      </div>
     </div>
     <div style="overflow-x:auto">
       <table class="data-table">
@@ -347,6 +354,20 @@ function countStatus(arr,field){
   const c={Done:0,'In Progress':0,'Not Start':0,Hold:0};
   arr.forEach(t=>{const k=t[field]||'Not Start';c[k]=(c[k]||0)+1;});return c;
 }
+// Done = ครบทุก milestone: UAT + Fix + Retest + Confirm + Manual
+function isFullyDone(t){
+  return t.uat==='Done' && t.fix==='Done' && t.retest==='Done' && t.confirm===true && t.manual===true;
+}
+function countBmsStatus(arr){
+  const c={Done:0,'In Progress':0,'Not Start':0,Hold:0};
+  arr.forEach(t=>{
+    if(t.uat==='Hold') c.Hold++;
+    else if(isFullyDone(t)) c.Done++;
+    else if(t.uat==='Not Start' && t.fix==='Not Start' && t.retest==='Not Start') c['Not Start']++;
+    else c['In Progress']++;
+  });
+  return c;
+}
 function makeLegend(el,cnt){
   el.innerHTML=Object.entries(cnt).map(([k,v])=>
     `<div class="leg"><div class="leg-dot" style="background:${SC[k]||'#999'}"></div><span>${k} <b>${v}</b></span></div>`
@@ -366,7 +387,7 @@ document.querySelectorAll('.nav-item').forEach(item=>{
 // ══════════════════════════════════════════════════════════════════════════════
 // HOME PAGE
 // ══════════════════════════════════════════════════════════════════════════════
-const bmsCnt   = countStatus(TASKS,'uat');
+const bmsCnt   = countBmsStatus(TASKS);
 const phaseCnt = countStatus(PHASES,'status');
 const bmsTotal = TASKS.length;
 const phTotal  = PHASES.length;
@@ -473,20 +494,51 @@ new Chart(document.getElementById('bmsBar').getContext('2d'),{
     plugins:{legend:{position:'bottom',labels:{boxWidth:11,font:{size:11},padding:12}}}}
 });
 
-// BMS Milestone table + filter
+// BMS Milestone table + filter (module + status)
 const allGroups=[...new Set(TASKS.map(t=>t.group))];
 let activeGrp='All';
+let activeStat='All';
+
+// Module filter
 const fb=document.getElementById('bmsFilterBar');
 ['All',...allGroups.map(g=>g.replace(/^5\.\d+\.?\d*\s/,''))].forEach((lbl,i)=>{
-  const btn=document.createElement('button');btn.className='filter-btn'+(i===0?' active':'');btn.textContent=lbl;
+  const btn=document.createElement('button');btn.className='filter-btn mod-btn'+(i===0?' active':'');btn.textContent=lbl;
   btn.addEventListener('click',()=>{
-    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+    document.querySelectorAll('.mod-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
     activeGrp=i===0?'All':allGroups[i-1];renderBmsTable();
   });
   fb.appendChild(btn);
 });
+
+// Status filter
+const statusColors={Done:'#16a34a','In Progress':'#d97706','Not Start':'#6b7280',Hold:'#dc2626'};
+const sb=document.getElementById('bmsStatusBar');
+['All','Done','In Progress','Not Start','Hold'].forEach(lbl=>{
+  const btn=document.createElement('button');
+  btn.className='filter-btn stat-btn'+(lbl==='All'?' active':'');
+  btn.textContent=lbl;
+  if(lbl!=='All') btn.style.cssText=`border-color:${statusColors[lbl]};color:${statusColors[lbl]}`;
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.stat-btn').forEach(b=>{b.classList.remove('active');if(b.dataset.lbl!=='All')b.style.cssText=`border-color:${statusColors[b.dataset.lbl]};color:${statusColors[b.dataset.lbl]}`;});
+    btn.classList.add('active');
+    if(lbl!=='All') btn.style.cssText=`background:${statusColors[lbl]};color:#fff;border-color:${statusColors[lbl]}`;
+    else btn.style.cssText='';
+    activeStat=lbl;renderBmsTable();
+  });
+  btn.dataset.lbl=lbl;
+  sb.appendChild(btn);
+});
+
+function getEffectiveStatus(t){
+  if(t.uat==='Hold') return 'Hold';
+  if(isFullyDone(t)) return 'Done';
+  if(t.uat==='Not Start' && t.fix==='Not Start' && t.retest==='Not Start') return 'Not Start';
+  return 'In Progress';
+}
+
 function renderBmsTable(){
-  const rows=activeGrp==='All'?TASKS:TASKS.filter(t=>t.group===activeGrp);
+  let rows=activeGrp==='All'?TASKS:TASKS.filter(t=>t.group===activeGrp);
+  if(activeStat!=='All') rows=rows.filter(t=>getEffectiveStatus(t)===activeStat);
   document.getElementById('bmsTbody').innerHTML=rows.map((t,i)=>{
     const grpShort=t.group.replace(/^5\.\d+\.?\d*\s/,'');
     const taskName=t.task.replace(/^5\.[\d.]+\s*/,'');
